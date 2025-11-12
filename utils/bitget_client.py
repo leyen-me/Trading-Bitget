@@ -123,6 +123,7 @@ class BitgetClient:
         price: Optional[str] = None,
         product_type: str = "USDT-FUTURES",
         margin_mode: str = "isolated",  # "isolated" or "crossed"
+        leverage: Optional[str] = None,
     ) -> Dict[str, Any]:
         """下单"""
         data = {
@@ -136,6 +137,10 @@ class BitgetClient:
         
         if order_type == "limit" and price:
             data["price"] = str(price)
+        
+        # 如果指定了杠杆，添加到请求中
+        if leverage:
+            data["leverage"] = leverage
         
         return self._request("POST", "/api/mix/v1/order/placeOrder", data=data)
     
@@ -162,10 +167,32 @@ class BitgetClient:
             "productType": product_type
         })
     
-    def get_openable_size(self, symbol: str, product_type: str = "USDT-FUTURES", margin_mode: str = "isolated") -> Dict[str, Any]:
+    def get_openable_size(
+        self, 
+        symbol: str, 
+        product_type: str = "USDT-FUTURES", 
+        margin_mode: str = "isolated",
+        leverage: str = "2"
+    ) -> Dict[str, Any]:
         """获取可开数量"""
         return self._request("GET", "/api/mix/v1/account/open-count", params={
             "symbol": symbol,
+            "productType": product_type,
+            "marginMode": margin_mode,
+            "leverage": leverage
+        })
+    
+    def set_leverage(
+        self,
+        symbol: str,
+        leverage: str,
+        product_type: str = "USDT-FUTURES",
+        margin_mode: str = "isolated"
+    ) -> Dict[str, Any]:
+        """设置杠杆倍数"""
+        return self._request("POST", "/api/mix/v1/account/setLeverage", data={
+            "symbol": symbol,
+            "leverage": leverage,
             "productType": product_type,
             "marginMode": margin_mode
         })

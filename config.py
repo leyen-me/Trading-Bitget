@@ -27,4 +27,5 @@ class Config:
     # ==================== 交易相关 ====================
     MIN_PRICE_FILTER = float(os.getenv("MIN_PRICE_FILTER", "200")) # 最小开仓金额，小于此价格，便会全仓买入
     ORDER_CHECK_INTERVAL = int(os.getenv("ORDER_CHECK_INTERVAL", "60")) # 订单检查时间 1 分钟
-    MAX_PURCHASE_RATIO = os.getenv("MAX_PURCHASE_RATIO", "0.5") # 每次交易的最大购买比例，即最多购买多少钱的合约
+    DEFAULT_LEVERAGE = os.getenv("DEFAULT_LEVERAGE", "2") # 默认杠杆倍数
+    DEFAULT_POSITION_RATIO = float(os.getenv("DEFAULT_POSITION_RATIO", "0.1")) # 默认逐仓比例，每笔交易占账户的 10%
