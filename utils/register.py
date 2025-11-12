@@ -4,6 +4,7 @@ from flask import jsonify, send_from_directory
 from flask_cors import CORS
 from lib.MyFlask import MyFlask
 from routes.webhook import webhook_bp
+from routes.test_bitget_client import test_bitget_bp
 
 
 def setup_logging(app: MyFlask) -> None:
@@ -53,3 +54,4 @@ def setup_error_handlers(app: MyFlask):
 
 def setup_blueprint(app: MyFlask):
     app.register_blueprint(blueprint=webhook_bp, url_prefix="/api")
+    app.register_blueprint(blueprint=test_bitget_bp, url_prefix="/api")
