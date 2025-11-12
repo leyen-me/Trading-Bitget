@@ -1,0 +1,159 @@
+//@version=6
+strategy(title = "Supertrend_TSLL_VSA_Filter", shorttitle = "ST_TSLL_VSA", overlay = true, initial_capital = 10000, 
+     default_qty_type = strategy.percent_of_equity, pyramiding = 0, default_qty_value = 330, 
+     commission_type = strategy.commission.percent, commission_value = 0, 
+     calc_on_every_tick = false, process_orders_on_close = true, margin_long=0.33, margin_short=0.33)
+
+// =============================================================================
+// 参数设置
+// =============================================================================
+
+// ---- ATR 止盈止损 ----
+atr_group            = "ATR 止盈止损"
+atr_period           = input.int(10, "ATR 周期", minval=1, group=atr_group)
+atr_mult_sl          = input.float(2.6, "止损倍数", minval=0.1, step=0.1, group=atr_group)
+atr_mult_tp          = input.float(3.5, "止盈倍数", minval=0.1, step=0.1, group=atr_group)
+
+// ---- Supertrend 信号 ----
+super_group          = "Supertrend 参数"
+st_atr_period        = input.int(18, "Supertrend ATR 长度", minval=1, group=super_group)
+st_factor            = input.float(3.5, "Supertrend 因子", minval=0.1, step=0.1, group=super_group)
+
+// ---- 日内交易控制 ----
+session_group        = "日内交易控制"
+close_hour           = input.int(15, "强制平仓小时 (交易所时间)", minval=0, maxval=23, group=session_group)
+close_minute         = input.int(40, "强制平仓分钟 (交易所时间)", minval=0, maxval=59, group=session_group)
+max_trades_per_day   = input.int(1, "每日最大交易次数", minval=1, maxval=20, group=session_group)
+skip_gap_open        = input.bool(true, "跳过大幅跳空开仓", group=session_group)    // ✅ 新增
+gap_threshold        = input.float(4, "跳空阈值(%)", minval=0.1, step=0.1, group=session_group)  // ✅ 新增
+
+// ---- 其他设置 ----
+filter_group         = "信号过滤"
+exit_on_reverse_signal = input.bool(true, "反向信号平仓", group=filter_group)
+use_vsa_filter         = input.bool(true, "启用VSA量价过滤", group=filter_group)
+vol_ma_len             = input.int(12, "VSA成交量均线周期", minval=1, group=filter_group)
+vol_mult               = input.float(1.25, "VSA放量倍数阈值", minval=1.0, step=0.1, group=filter_group)
+body_ratio_thr         = input.float(0.6, "VSA实体占比阈值 (0~1)", minval=0.0, maxval=1.0, step=0.1, group=filter_group)
+
+// =============================================================================
+// Supertrend 信号计算
+// =============================================================================
+[st_value, st_direction] = ta.supertrend(st_factor, st_atr_period)
+
+long_signal  = (st_direction[1] > 0 and st_direction < 0)
+short_signal = (st_direction[1] < 0 and st_direction > 0)
+
+// =============================================================================
+// 成交量过滤（VSA逻辑）
+// =============================================================================
+v = volume
+hl_range = high - low
+body = math.abs(close - open)
+vol_ma = ta.sma(v, vol_ma_len)
+
+is_bullish = close > open
+is_bearish = close < open
+is_strong_body = (body / (hl_range == 0 ? 1 : hl_range)) > body_ratio_thr
+is_high_volume = v > vol_ma * vol_mult
+
+strong_buy_signal  = is_bullish and is_strong_body and is_high_volume
+strong_sell_signal = is_bearish and is_strong_body and is_high_volume
+
+long_vol_ok  = not use_vsa_filter or strong_buy_signal
+short_vol_ok = not use_vsa_filter or strong_sell_signal
+
+// =============================================================================
+// 日内交易管理 + 跳空检测
+// =============================================================================
+var string last_trade_day = na
+var int trades_today = 0
+
+today_str = str.tostring(year(time)) + "-" + str.tostring(month(time)) + "-" + str.tostring(dayofmonth(time))
+new_day = na(last_trade_day) or today_str != last_trade_day
+
+if new_day
+    trades_today := 0
+    last_trade_day := today_str
+
+// ---- 计算是否为大幅跳空 ----
+gap_pct = math.abs(open - close[1]) / close[1] * 100
+is_big_gap = gap_pct > gap_threshold
+skip_today_due_to_gap = skip_gap_open and new_day and is_big_gap
+
+ny_hour   = hour(time, "America/New_York")
+ny_minute = minute(time, "America/New_York")
+after_close_time = (ny_hour > close_hour) or (ny_hour == close_hour and ny_minute >= close_minute)
+can_trade_today = trades_today < max_trades_per_day and not after_close_time and not skip_today_due_to_gap
+
+// =============================================================================
+// ATR 止盈止损计算
+// =============================================================================
+atr = ta.atr(atr_period)
+var float long_sl = na
+var float long_tp = na
+var float short_sl = na
+var float short_tp = na
+
+// =============================================================================
+// 开仓逻辑
+// =============================================================================
+if can_trade_today
+    if long_signal and strategy.position_size == 0 and long_vol_ok
+        strategy.entry("Long", strategy.long, comment="Supertrend 多头")
+        trades_today += 1
+        long_sl := close - atr * atr_mult_sl
+        long_tp := close + atr * atr_mult_tp
+
+    if short_signal and strategy.position_size == 0 and short_vol_ok
+        strategy.entry("Short", strategy.short, comment="Supertrend 空头")
+        trades_today += 1
+        short_sl := close + atr * atr_mult_sl
+        short_tp := close - atr * atr_mult_tp
+
+// =============================================================================
+// 平仓逻辑
+// =============================================================================
+if strategy.position_size > 0
+    if low <= long_sl
+        strategy.close("Long", comment="止损出场")
+    else if high >= long_tp
+        strategy.close("Long", comment="止盈出场")
+
+if strategy.position_size < 0
+    if high >= short_sl
+        strategy.close("Short", comment="止损出场")
+    else if low <= short_tp
+        strategy.close("Short", comment="止盈出场")
+
+if exit_on_reverse_signal
+    if strategy.position_size > 0 and short_signal
+        strategy.close("Long", comment="反向信号平仓")
+    if strategy.position_size < 0 and long_signal
+        strategy.close("Short", comment="反向信号平仓")
+
+if after_close_time and strategy.position_size != 0
+    strategy.close_all(comment="日内强平")
+
+// =============================================================================
+// 绘制
+// =============================================================================
+plot(st_direction < 0 ? st_value : na, "Supertrend Up", color=color.new(color.green, 0), style=plot.style_linebr)
+plot(st_direction > 0 ? st_value : na, "Supertrend Down", color=color.new(color.red, 0), style=plot.style_linebr)
+
+plotshape(long_signal , title = "多头信号", text = 'B', style = shape.labelup,   location = location.belowbar, color= color.new(color.green, 0), textcolor = color.white,  size = size.tiny)
+plotshape(short_signal, title = "空头信号", text = 'S', style = shape.labeldown, location = location.abovebar, color= color.new(color.red, 0),   textcolor = color.white,  size = size.tiny)
+
+// ---- VSA信号可视化 ----
+plotshape(strong_buy_signal and use_vsa_filter,  title="放量大阳", style=shape.triangleup,   location=location.belowbar, color=color.new(color.lime, 0), size=size.tiny, text="VSA↑")
+plotshape(strong_sell_signal and use_vsa_filter, title="放量大阴", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0),  size=size.tiny, text="VSA↓")
+
+// ---- 标记跳空过滤 ----
+plotshape(skip_today_due_to_gap, title="跳空过滤触发", text="GAP❌", style=shape.xcross, location=location.top, color=color.new(color.yellow, 0), size=size.tiny)
+
+bodyMiddle = (open + close) / 2
+fill(plot(bodyMiddle, display=display.none),
+     plot(st_direction < 0 ? st_value : na, display=display.none),
+     color=color.new(color.green, 90), fillgaps=false)
+fill(plot(bodyMiddle, display=display.none),
+     plot(st_direction > 0 ? st_value : na, display=display.none),
+     color=color.new(color.red, 90), fillgaps=false)

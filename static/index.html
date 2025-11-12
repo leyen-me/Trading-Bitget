@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trading LongPort - 精准量化交易平台</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        /* 暗色主题 */
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #111111;
+        --bg-tertiary: #1a1a1a;
+        --bg-elevated: #1f1f1f;
+        --bg-glass: rgba(26, 26, 26, 0.7);
+
+        --border-primary: rgba(255, 255, 255, 0.08);
+        --border-secondary: rgba(255, 255, 255, 0.06);
+        --border-accent: rgba(99, 102, 241, 0.3);
+
+        --text-primary: #ffffff;
+        --text-secondary: #a1a1aa;
+        --text-tertiary: #71717a;
+        --text-inverse: #0a0a0a;
+
+        --accent-primary: #6366f1;
+        --accent-primary-hover: #4f46e5;
+        --accent-secondary: #8b5cf6;
+        --accent-cyan: #06b6d4;
+        --accent-green: #10b981;
+        --accent-red: #ef4444;
+        --accent-orange: #f59e0b;
+        --accent-yellow: #eab308;
+
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+        --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+
+        --spacing-unit: 8px;
+
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 浅色主题 */
+      [data-theme="light"] {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f9fafb;
+        --bg-tertiary: #f3f4f6;
+        --bg-elevated: #ffffff;
+        --bg-glass: rgba(255, 255, 255, 0.8);
+
+        --border-primary: rgba(0, 0, 0, 0.08);
+        --border-secondary: rgba(0, 0, 0, 0.06);
+        --border-accent: rgba(99, 102, 241, 0.3);
+
+        --text-primary: #0a0a0a;
+        --text-secondary: #52525b;
+        --text-tertiary: #a1a1aa;
+        --text-inverse: #ffffff;
+
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        overflow-x: hidden;
+        transition: background-color var(--transition-base),
+          color var(--transition-base);
+      }
+
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 calc(var(--spacing-unit) * 3);
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 0 calc(var(--spacing-unit) * 2);
+        }
+      }
+
+      /* 背景效果 - 高级版 */
+      .bg-gradient {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.5;
+      }
+
+      [data-theme="dark"] .bg-gradient {
+        background: radial-gradient(
+            circle at 30% 20%,
+            rgba(99, 102, 241, 0.12),
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(139, 92, 246, 0.08),
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 50% 50%,
+            rgba(6, 182, 212, 0.05),
+            transparent 70%
+          );
+      }
+
+      [data-theme="light"] .bg-gradient {
+        background: radial-gradient(
+            circle at 30% 20%,
+            rgba(99, 102, 241, 0.04),
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(139, 92, 246, 0.03),
+            transparent 50%
+          );
+      }
+
+      /* 网格图案 */
+      .grid-pattern {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.4;
+        background-image: linear-gradient(
+            var(--border-primary) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, var(--border-primary) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: radial-gradient(
+          ellipse 80% 50% at 50% 40%,
+          black 10%,
+          transparent 70%
+        );
+        -webkit-mask-image: radial-gradient(
+          ellipse 80% 50% at 50% 40%,
+          black 10%,
+          transparent 70%
+        );
+      }
+
+      /* 浮动光斑 */
+      .floating-orbs {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        overflow: hidden;
+      }
+
+      .orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.3;
+        animation: float 20s infinite ease-in-out;
+      }
+
+      [data-theme="dark"] .orb {
+        opacity: 0.25;
+      }
+
+      [data-theme="light"] .orb {
+        opacity: 0.15;
+      }
+
+      .orb-1 {
+        width: 400px;
+        height: 400px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        top: -10%;
+        left: -5%;
+        animation-delay: 0s;
+        animation-duration: 25s;
+      }
+
+      .orb-2 {
+        width: 500px;
+        height: 500px;
+        background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+        bottom: -15%;
+        right: -10%;
+        animation-delay: -10s;
+        animation-duration: 30s;
+      }
+
+      .orb-3 {
+        width: 350px;
+        height: 350px;
+        background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        top: 40%;
+        right: 10%;
+        animation-delay: -5s;
+        animation-duration: 28s;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(30px, -50px) scale(1.1);
+        }
+        66% {
+          transform: translate(-20px, 30px) scale(0.9);
+        }
+      }
+
+      /* 装饰线条 */
+      .deco-lines {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.15;
+      }
+
+      .deco-line {
+        position: absolute;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent-primary),
+          transparent
+        );
+        height: 1px;
+        width: 100%;
+        animation: shimmer 8s infinite linear;
+      }
+
+      .deco-line:nth-child(1) {
+        top: 20%;
+        animation-delay: 0s;
+      }
+
+      .deco-line:nth-child(2) {
+        top: 50%;
+        animation-delay: -3s;
+      }
+
+      .deco-line:nth-child(3) {
+        top: 80%;
+        animation-delay: -6s;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.3;
+        }
+        100% {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      /* 点阵装饰 */
+      .dot-pattern {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.08;
+        background-image: radial-gradient(
+          circle,
+          var(--text-primary) 1px,
+          transparent 1px
+        );
+        background-size: 24px 24px;
+        mask-image: radial-gradient(
+          ellipse at 100% 50%,
+          black 0%,
+          transparent 70%
+        );
+        -webkit-mask-image: radial-gradient(
+          ellipse at 100% 50%,
+          black 0%,
+          transparent 70%
+        );
+      }
+
+      /* Header - 现代化导航栏 */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        backdrop-filter: blur(16px) saturate(180%);
+        background: var(--bg-glass);
+        border-bottom: 1px solid var(--border-primary);
+        transition: all var(--transition-base);
+      }
+
+      header.scrolled {
+        box-shadow: var(--shadow-md);
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 64px;
+        gap: calc(var(--spacing-unit) * 3);
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1.5);
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: opacity var(--transition-fast);
+      }
+
+      .logo:hover {
+        opacity: 0.8;
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1);
+        list-style: none;
+        flex: 1;
+        justify-content: center;
+      }
+
+      .nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9375rem;
+        padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+        position: relative;
+      }
+
+      .nav-links a:hover {
+        color: var(--text-primary);
+        background: var(--bg-tertiary);
+      }
+
+      .nav-links a.active {
+        color: var(--accent-primary);
+        background: rgba(99, 102, 241, 0.1);
+      }
+
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1.5);
+      }
+
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-primary);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-fast);
+        font-size: 1.1rem;
+      }
+
+      .theme-toggle:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border-color: var(--border-accent);
+      }
+
+      .btn-primary {
+        background: var(--accent-primary);
+        color: var(--text-inverse);
+        padding: calc(var(--spacing-unit) * 1.25)
+          calc(var(--spacing-unit) * 2.5);
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1);
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      /* Hero Section */
+      .hero {
+        padding: calc(var(--spacing-unit) * 16) 0 calc(var(--spacing-unit) * 12);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      /* Hero 背景装饰 */
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 800px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.1), transparent 70%);
+        border-radius: 50%;
+        filter: blur(60px);
+        pointer-events: none;
+        z-index: -1;
+      }
+      
+      [data-theme="light"] .hero::before {
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.05), transparent 70%);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1);
+        padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 2);
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: calc(var(--spacing-unit) * 3);
+        transition: all var(--transition-fast);
+      }
+
+      .badge:hover {
+        border-color: var(--border-accent);
+        background: var(--bg-elevated);
+      }
+
+      .badge .badge-icon {
+        width: 6px;
+        height: 6px;
+        background: var(--accent-green);
+        border-radius: 50%;
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin-bottom: calc(var(--spacing-unit) * 3);
+        color: var(--text-primary);
+      }
+
+      .hero h1 .gradient-text {
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero p.lead {
+        font-size: clamp(1.125rem, 2vw, 1.25rem);
+        color: var(--text-secondary);
+        max-width: 700px;
+        margin: 0 auto calc(var(--spacing-unit) * 5);
+        line-height: 1.7;
+      }
+
+      .hero-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--spacing-unit) * 2);
+        flex-wrap: wrap;
+      }
+
+      .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        padding: calc(var(--spacing-unit) * 1.25)
+          calc(var(--spacing-unit) * 2.5);
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        border: 1px solid var(--border-primary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-elevated);
+        border-color: var(--border-accent);
+        transform: translateY(-1px);
+      }
+
+      /* Code Block */
+      .code-container {
+        max-width: 900px;
+        margin: calc(var(--spacing-unit) * 8) auto 0;
+      }
+
+      .code-demo {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-xl);
+      }
+
+      .code-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(var(--spacing-unit) * 2);
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .code-dots {
+        display: flex;
+        gap: calc(var(--spacing-unit) * 1);
+      }
+
+      .code-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .code-dot:nth-child(1) {
+        background: #ff5f56;
+      }
+      .code-dot:nth-child(2) {
+        background: #ffbd2e;
+      }
+      .code-dot:nth-child(3) {
+        background: #27c93f;
+      }
+
+      .code-title {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .code-content {
+        padding: calc(var(--spacing-unit) * 3);
+        font-family: "SF Mono", "Monaco", "Consolas", monospace;
+        font-size: 0.875rem;
+        line-height: 1.7;
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        overflow-x: auto;
+      }
+
+      .code-line {
+        display: inline;
+      }
+
+      .code-line.keyword {
+        color: var(--accent-cyan);
+        font-weight: 500;
+      }
+
+      .code-line.comment {
+        color: var(--text-tertiary);
+      }
+
+      .code-line.normal {
+        color: var(--text-secondary);
+      }
+
+      /* Features Section */
+      .features {
+        padding: calc(var(--spacing-unit) * 15) 0;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: calc(var(--spacing-unit) * 8);
+      }
+
+      .section-label {
+        display: inline-block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: calc(var(--spacing-unit) * 2);
+      }
+
+      .section-title {
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        margin-bottom: calc(var(--spacing-unit) * 2);
+      }
+
+      .section-desc {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: calc(var(--spacing-unit) * 3);
+      }
+
+      .feature-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-lg);
+        padding: calc(var(--spacing-unit) * 4);
+        transition: all var(--transition-base);
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      .feature-card.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .feature-card:hover {
+        border-color: var(--border-accent);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-4px);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: calc(var(--spacing-unit) * 2.5);
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: calc(var(--spacing-unit) * 1.5);
+        letter-spacing: -0.01em;
+      }
+
+      .feature-card p {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        font-size: 0.9375rem;
+      }
+
+      /* Trading Panel */
+      .trading-panel {
+        padding: calc(var(--spacing-unit) * 15) 0;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-primary);
+      }
+
+      .panel-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .panel-container {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-xl);
+      }
+
+      .panel-header {
+        padding: calc(var(--spacing-unit) * 5) calc(var(--spacing-unit) * 5) calc(var(--spacing-unit) * 4);
+        border-bottom: 1px solid var(--border-primary);
+        background: var(--bg-secondary);
+      }
+
+      .panel-title {
+        font-size: clamp(1.5rem, 3vw, 1.75rem);
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: calc(var(--spacing-unit) * 1.5);
+        letter-spacing: -0.02em;
+      }
+
+      .panel-desc {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        max-width: 600px;
+      }
+
+      /* 表单区域 */
+      .panel-form {
+        padding: calc(var(--spacing-unit) * 5);
+      }
+
+      .form-group {
+        margin-bottom: calc(var(--spacing-unit) * 3);
+      }
+
+      .form-group:last-of-type {
+        margin-bottom: calc(var(--spacing-unit) * 4);
+      }
+
+      .form-label {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: calc(var(--spacing-unit) * 1.25);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .form-label i {
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+      }
+
+      .form-input {
+        width: 100%;
+        padding: calc(var(--spacing-unit) * 1.75) calc(var(--spacing-unit) * 2);
+        font-size: 1rem;
+        font-family: inherit;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        border: 1.5px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        outline: none;
+        transition: all var(--transition-fast);
+      }
+
+      .form-input:hover {
+        border-color: var(--border-secondary);
+        background: var(--bg-tertiary);
+      }
+
+      .form-input:focus {
+        border-color: var(--accent-primary);
+        background: var(--bg-elevated);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
+        transform: translateY(-1px);
+      }
+
+      .form-input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .form-input.error {
+        border-color: var(--accent-red);
+      }
+
+      .form-input.error:focus {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
+      }
+
+      .form-hint {
+        margin-top: calc(var(--spacing-unit) * 1);
+        font-size: 0.8125rem;
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 0.75);
+      }
+
+      .form-hint.error {
+        color: var(--accent-red);
+      }
+
+      /* 操作区域分隔 */
+      .panel-divider {
+        height: 1px;
+        background: var(--border-primary);
+        margin: calc(var(--spacing-unit) * 4) 0;
+      }
+
+      .action-section {
+        margin-bottom: calc(var(--spacing-unit) * 4);
+      }
+
+      .action-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: calc(var(--spacing-unit) * 2);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      /* 按钮组 - Apple 风格 */
+      .trading-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: calc(var(--spacing-unit) * 1.5);
+        margin-bottom: calc(var(--spacing-unit) * 2);
+      }
+
+      .trade-btn {
+        padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 2.5);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        font-family: inherit;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--spacing-unit) * 1);
+        position: relative;
+        letter-spacing: -0.01em;
+      }
+
+      .trade-btn i {
+        font-size: 1rem;
+      }
+
+      .trade-btn:active {
+        transform: scale(0.98);
+      }
+
+      .trade-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* 主要操作 - 实心按钮 */
+      .btn-long {
+        background: var(--accent-green);
+        color: white;
+        border: none;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-long:hover:not(:disabled) {
+        background: #059669;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        transform: translateY(-1px);
+      }
+
+      .btn-short {
+        background: var(--accent-red);
+        color: white;
+        border: none;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-short:hover:not(:disabled) {
+        background: #dc2626;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        transform: translateY(-1px);
+      }
+
+      /* 次要操作 - 描边按钮 (Ghost Button) */
+      .btn-flat-long,
+      .btn-flat-short {
+        background: transparent;
+        color: var(--text-primary);
+        border: 1.5px solid var(--border-primary);
+      }
+
+      .btn-flat-long:hover:not(:disabled),
+      .btn-flat-short:hover:not(:disabled) {
+        background: var(--bg-tertiary);
+        border-color: var(--border-accent);
+        transform: translateY(-1px);
+      }
+
+      /* 反馈信息 - Toast 风格 */
+      .response-container {
+        position: fixed;
+        top: calc(var(--spacing-unit) * 10);
+        right: calc(var(--spacing-unit) * 3);
+        max-width: 400px;
+        z-index: 2000;
+        pointer-events: none;
+      }
+
+      .response-message {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-lg);
+        padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 2.5);
+        box-shadow: var(--shadow-xl);
+        display: flex;
+        align-items: center;
+        gap: calc(var(--spacing-unit) * 1.5);
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+        pointer-events: auto;
+        transform: translateX(120%);
+        opacity: 0;
+        transition: all var(--transition-base);
+        backdrop-filter: blur(12px);
+      }
+
+      .response-message.show {
+        transform: translateX(0);
+        opacity: 1;
+      }
+
+      .response-message i {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+      }
+
+      .response-message.success {
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+
+      .response-message.success i {
+        color: var(--accent-green);
+      }
+
+      .response-message.error {
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+
+      .response-message.error i {
+        color: var(--accent-red);
+      }
+
+      .response-message.loading i {
+        color: var(--accent-primary);
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* 空状态 */
+      .empty-state {
+        text-align: center;
+        padding: calc(var(--spacing-unit) * 6) calc(var(--spacing-unit) * 3);
+        color: var(--text-tertiary);
+      }
+
+      .empty-state i {
+        font-size: 3rem;
+        margin-bottom: calc(var(--spacing-unit) * 2);
+        opacity: 0.3;
+      }
+
+      .empty-state p {
+        font-size: 0.9375rem;
+      }
+
+      @media (max-width: 640px) {
+        .trading-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .response-container {
+          left: calc(var(--spacing-unit) * 2);
+          right: calc(var(--spacing-unit) * 2);
+          max-width: none;
+        }
+
+        .panel-header,
+        .panel-form {
+          padding: calc(var(--spacing-unit) * 3);
+        }
+      }
+
+      /* CTA Footer */
+      .cta-section {
+        padding: calc(var(--spacing-unit) * 15) 0;
+        text-align: center;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-primary);
+      }
+
+      .cta-content {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .cta-section h2 {
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        margin-bottom: calc(var(--spacing-unit) * 2);
+      }
+
+      .cta-section p {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: calc(var(--spacing-unit) * 4);
+      }
+
+      /* Footer */
+      footer {
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-primary);
+        padding: calc(var(--spacing-unit) * 6) 0;
+      }
+
+      .footer-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: calc(var(--spacing-unit) * 3);
+      }
+
+      .footer-text {
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+      }
+
+      .footer-links {
+        display: flex;
+        gap: calc(var(--spacing-unit) * 3);
+        list-style: none;
+      }
+
+      .footer-links a {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color var(--transition-fast);
+      }
+
+      .footer-links a:hover {
+        color: var(--text-primary);
+      }
+
+      /* Mobile Responsive */
+      .mobile-menu-btn {
+        display: none;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border-primary);
+        background: transparent;
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+
+        .mobile-menu-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .hero {
+          padding: calc(var(--spacing-unit) * 10) 0
+            calc(var(--spacing-unit) * 8);
+        }
+
+        .hero-actions {
+          flex-direction: column;
+          width: 100%;
+        }
+
+        .hero-actions .btn-primary,
+        .hero-actions .btn-secondary {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .panel-container {
+          padding: calc(var(--spacing-unit) * 3);
+        }
+
+        .footer-content {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .footer-links {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+      }
+
+      /* Animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-in {
+        animation: fadeInUp 0.6s ease-out forwards;
+      }
+    </style>
+  </head>
+
+  <body data-theme="dark">
+    <!-- 背景效果 -->
+    <div class="bg-gradient"></div>
+    <div class="grid-pattern"></div>
+    <div class="dot-pattern"></div>
+    
+    <!-- 浮动光斑 -->
+    <div class="floating-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    
+    <!-- 装饰线条 -->
+    <div class="deco-lines">
+      <div class="deco-line"></div>
+      <div class="deco-line"></div>
+      <div class="deco-line"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="header">
+      <div class="container">
+        <nav>
+          <a href="#" class="logo">
+            <div class="logo-icon">📊</div>
+            <span>Trading LongPort</span>
+          </a>
+          <ul class="nav-links">
+            <li><a href="#features">功能特性</a></li>
+            <li><a href="#trading">交易面板</a></li>
+            <li><a href="#docs">文档</a></li>
+            <li><a href="#community">社区</a></li>
+          </ul>
+          <div class="nav-actions">
+            <button
+              class="theme-toggle"
+              id="theme-toggle"
+              aria-label="切换主题"
+            >
+              <i class="fas fa-moon"></i>
+            </button>
+            <a
+              href="https://github.com/leyen-me/Trading-LongPort"
+              class="btn-primary"
+              target="_blank"
+            >
+              <i class="fab fa-github"></i>
+              GitHub
+            </a>
+          </div>
+          <button class="mobile-menu-btn" aria-label="菜单">
+            <i class="fas fa-bars"></i>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="badge">
+          <span class="badge-icon"></span>
+          <span>Precision Trading Engine</span>
+        </div>
+        <h1>
+          用代码执行<br />
+          <span class="gradient-text">你的交易策略</span>
+        </h1>
+        <p class="lead">
+          Trading LongPort 是专为 Python
+          开发者打造的高性能量化交易框架，无缝集成 LongPort API，
+          让你专注于策略本身，而非基础设施。
+        </p>
+        <div class="hero-actions">
+          <a href="#trading" class="btn-primary">
+            <i class="fas fa-rocket"></i>
+            开始交易
+          </a>
+          <a
+            href="https://github.com/leyen-me/Trading-LongPort"
+            class="btn-secondary"
+            target="_blank"
+          >
+            <i class="fab fa-github"></i>
+            查看源码
+          </a>
+        </div>
+
+        <!-- Code Demo -->
+        <div class="code-container">
+          <div class="code-demo">
+            <div class="code-header">
+              <div class="code-dots">
+                <div class="code-dot"></div>
+                <div class="code-dot"></div>
+                <div class="code-dot"></div>
+              </div>
+              <div class="code-title">快速开始</div>
+            </div>
+            <div class="code-content" id="typing-code"># 1. 配置环境变量
+export LONGPORT_API_KEY="your_key"
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 启动服务
+python app.py
+
+# ✨ 开始你的量化交易之旅！</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-label">核心优势</div>
+          <h2 class="section-title">为什么选择 Trading LongPort？</h2>
+          <p class="section-desc">
+            专为量化交易者设计的完整解决方案，从策略开发到实盘执行一站式支持
+          </p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <h3>策略即服务</h3>
+            <p>
+              内置回测引擎与模拟交易模式，支持策略热加载，边写边跑，快速验证交易想法。
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>超低延迟</h3>
+            <p>
+              异步非阻塞架构，订单响应
+              &lt;50ms，捕捉毫秒级交易机会，不错过任何行情。
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔐</div>
+            <h3>完全自主</h3>
+            <p>
+              本地运行，私钥不出设备，权限可控，数据安全，让你的交易策略完全掌控在自己手中。
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>实时监控</h3>
+            <p>
+              完整的交易日志与性能分析，实时追踪策略表现，数据可视化让决策更精准。
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔌</div>
+            <h3>灵活集成</h3>
+            <p>
+              支持 Webhook、REST API、WebSocket 多种接入方式，轻松对接
+              TradingView 等第三方平台。
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🛠️</div>
+            <h3>开发友好</h3>
+            <p>
+              清晰的代码结构，完善的文档支持，丰富的示例策略，让你快速上手量化交易开发。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trading Panel -->
+    <section class="trading-panel" id="trading">
+      <div class="container">
+        <div class="panel-wrapper">
+          <div class="panel-container">
+            <!-- Header -->
+            <div class="panel-header">
+              <h2 class="panel-title">📊 实时交易控制台</h2>
+              <p class="panel-desc">
+                通过 Webhook 控制你的量化机器人，支持 TradingView 等平台集成
+              </p>
+            </div>
+
+            <!-- Form -->
+            <div class="panel-form">
+              <!-- Ticker 输入 -->
+              <div class="form-group">
+                <label for="ticker-input" class="form-label">
+                  <i class="fas fa-chart-line"></i>
+                  <span>Ticker Symbol</span>
+                </label>
+                <input
+                  type="text"
+                  id="ticker-input"
+                  class="form-input"
+                  placeholder="TSLA"
+                  value="TSLA"
+                  autocomplete="off"
+                />
+                <div class="form-hint" id="ticker-hint">
+                  <i class="fas fa-info-circle"></i>
+                  输入股票代码，如 AAPL, QQQ, SPY
+                </div>
+              </div>
+
+              <!-- Token 输入 -->
+              <div class="form-group">
+                <label for="token-input" class="form-label">
+                  <i class="fas fa-key"></i>
+                  <span>Auth Token</span>
+                </label>
+                <input
+                  type="password"
+                  id="token-input"
+                  class="form-input"
+                  placeholder="输入你的安全令牌"
+                  autocomplete="off"
+                />
+                <div class="form-hint" id="token-hint">
+                  <i class="fas fa-shield-alt"></i>
+                  令牌将加密存储于本地
+                </div>
+              </div>
+
+              <div class="panel-divider"></div>
+
+              <!-- 主要操作 -->
+              <div class="action-section">
+                <div class="action-label">开仓操作</div>
+                <div class="trading-grid">
+                  <button
+                    class="trade-btn btn-long"
+                    onclick="sendOrder('buy', 'long')"
+                  >
+                    <i class="fas fa-arrow-up"></i>
+                    做多
+                  </button>
+                  <button
+                    class="trade-btn btn-short"
+                    onclick="sendOrder('sell', 'short')"
+                  >
+                    <i class="fas fa-arrow-down"></i>
+                    做空
+                  </button>
+                </div>
+              </div>
+
+              <!-- 次要操作 -->
+              <div class="action-section">
+                <div class="action-label">平仓操作</div>
+                <div class="trading-grid">
+                  <button
+                    class="trade-btn btn-flat-long"
+                    onclick="sendOrder('sell', 'flat')"
+                  >
+                    <i class="fas fa-times-circle"></i>
+                    平多
+                  </button>
+                  <button
+                    class="trade-btn btn-flat-short"
+                    onclick="sendOrder('buy', 'flat')"
+                  >
+                    <i class="fas fa-times-circle"></i>
+                    平空
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast 通知 -->
+    <div class="response-container">
+      <div id="response" class="response-message">
+        <i class="fas fa-info-circle"></i>
+        <span>等待操作...</span>
+      </div>
+    </div>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="community">
+      <div class="container">
+        <div class="cta-content">
+          <h2>加入我们的开发者社区</h2>
+          <p>
+            已有 <strong>237+</strong> 位开发者使用 Trading LongPort
+            构建自动化交易系统。
+            立即开始你的量化交易之旅，与社区一起探索更多可能。
+          </p>
+          <a
+            href="https://github.com/leyen-me/Trading-LongPort"
+            class="btn-primary"
+            target="_blank"
+          >
+            <i class="fab fa-github"></i>
+            访问 GitHub 仓库
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <div class="footer-content">
+          <p class="footer-text">
+            © 2025 Trading LongPort. Built with ❤️ for Quant Traders.
+          </p>
+          <ul class="footer-links">
+            <li><a href="#">文档</a></li>
+            <li><a href="#">API</a></li>
+            <li>
+              <a
+                href="https://github.com/leyen-me/Trading-LongPort"
+                target="_blank"
+                >GitHub</a
+              >
+            </li>
+            <li><a href="#">隐私政策</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // === 主题切换 ===
+      const themeToggle = document.getElementById("theme-toggle");
+      const html = document.documentElement;
+      const body = document.body;
+
+      // 从 localStorage 加载主题
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      body.setAttribute("data-theme", savedTheme);
+      updateThemeIcon(savedTheme);
+
+      themeToggle.addEventListener("click", () => {
+        const currentTheme = body.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        body.setAttribute("data-theme", newTheme);
+        localStorage.setItem("theme", newTheme);
+        updateThemeIcon(newTheme);
+      });
+
+      function updateThemeIcon(theme) {
+        const icon = themeToggle.querySelector("i");
+        if (theme === "dark") {
+          icon.className = "fas fa-moon";
+        } else {
+          icon.className = "fas fa-sun";
+        }
+      }
+
+      // === Header 滚动效果 ===
+      const header = document.getElementById("header");
+      let lastScroll = 0;
+
+      window.addEventListener("scroll", () => {
+        const currentScroll = window.pageYOffset;
+
+        if (currentScroll > 50) {
+          header.classList.add("scrolled");
+        } else {
+          header.classList.remove("scrolled");
+        }
+
+        lastScroll = currentScroll;
+      });
+
+      // === 卡片入场动画 ===
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.classList.add("show");
+            }, index * 100);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll(".feature-card").forEach((card) => {
+        observer.observe(card);
+      });
+
+      // === Ticker & Token 管理 ===
+      const TICKER_INPUT = document.getElementById("ticker-input");
+      const TOKEN_INPUT = document.getElementById("token-input");
+      const RESPONSE_EL = document.getElementById("response");
+
+      // 从 localStorage 加载
+      const savedTicker =
+        localStorage.getItem("trading_longport_ticker") || "TSLA";
+      const savedToken = localStorage.getItem("trading_longport_token") || "";
+
+      TICKER_INPUT.value = savedTicker;
+      TOKEN_INPUT.value = savedToken;
+
+      // 监听输入变化并保存
+      TICKER_INPUT.addEventListener("input", () => {
+        localStorage.setItem(
+          "trading_longport_ticker",
+          TICKER_INPUT.value.trim()
+        );
+      });
+
+      TOKEN_INPUT.addEventListener("input", () => {
+        localStorage.setItem(
+          "trading_longport_token",
+          TOKEN_INPUT.value.trim()
+        );
+      });
+
+      // === 发送订单请求 ===
+      const API_URL = "/webhook";
+      let toastTimeout;
+
+      function sendOrder(action, sentiment) {
+        const ticker = TICKER_INPUT.value.trim();
+        const token = TOKEN_INPUT.value.trim();
+        const tickerHint = document.getElementById('ticker-hint');
+        const tokenHint = document.getElementById('token-hint');
+
+        // 重置错误状态
+        TICKER_INPUT.classList.remove('error');
+        TOKEN_INPUT.classList.remove('error');
+        tickerHint.classList.remove('error');
+        tokenHint.classList.remove('error');
+
+        // 校验输入
+        if (!ticker) {
+          TICKER_INPUT.classList.add('error');
+          tickerHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 请输入股票代码';
+          tickerHint.classList.add('error');
+          TICKER_INPUT.focus();
+          return;
+        }
+        if (!token) {
+          TOKEN_INPUT.classList.add('error');
+          tokenHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 请输入认证 Token';
+          tokenHint.classList.add('error');
+          TOKEN_INPUT.focus();
+          return;
+        }
+
+        // 重置正常提示
+        tickerHint.innerHTML = '<i class="fas fa-info-circle"></i> 输入股票代码，如 AAPL, QQQ, SPY';
+        tokenHint.innerHTML = '<i class="fas fa-shield-alt"></i> 令牌将加密存储于本地';
+
+        const data = { ticker, action, sentiment, token };
+        
+        // 显示加载状态
+        showToast('loading', '正在发送请求...');
+
+        axios
+          .post(API_URL, data)
+          .then((res) => {
+            showToast('success', '操作成功！订单已提交');
+          })
+          .catch((err) => {
+            console.error("请求失败:", err);
+            const msg = err.response?.data?.message || err.message || "网络错误";
+            showToast('error', `操作失败：${msg}`);
+          });
+      }
+
+      // Toast 通知函数
+      function showToast(type, message) {
+        const iconMap = {
+          loading: 'fas fa-spinner fa-spin',
+          success: 'fas fa-check-circle',
+          error: 'fas fa-times-circle'
+        };
+
+        RESPONSE_EL.className = `response-message ${type}`;
+        RESPONSE_EL.innerHTML = `
+          <i class="${iconMap[type]}"></i>
+          <span>${message}</span>
+        `;
+
+        // 显示 Toast
+        setTimeout(() => {
+          RESPONSE_EL.classList.add('show');
+        }, 10);
+
+        // 清除之前的定时器
+        clearTimeout(toastTimeout);
+
+        // 3秒后自动隐藏（非加载状态）
+        if (type !== 'loading') {
+          toastTimeout = setTimeout(() => {
+            RESPONSE_EL.classList.remove('show');
+          }, 3000);
+        }
+      }
+
+      // === 平滑滚动 ===
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          const href = this.getAttribute("href");
+          if (href !== "#" && href.length > 1) {
+            e.preventDefault();
+            const target = document.querySelector(href);
+            if (target) {
+              target.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

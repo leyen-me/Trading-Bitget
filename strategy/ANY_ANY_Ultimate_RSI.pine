@@ -1,0 +1,124 @@
+//@version=5
+indicator("Ultimate RSI [LuxAlgo] + Signal Alerts + Divergence", "Ultimate RSI (w/ Divergence)", overlay=false)
+
+//------------------------------------------------------------------------------
+// 参数设置
+//------------------------------------------------------------------------------
+length   = input.int(14, minval=2, title="RSI Length")
+smoType1 = input.string('RMA', 'RSI Method', options=['EMA','SMA','RMA','TMA'])
+src      = input(close, 'Source')
+
+arsiCss  = input(color.silver, 'RSI Color', inline='rsicss')
+autoCss  = input(true, 'Auto Color', inline='rsicss')
+
+// 信号线
+smooth    = input.int(14, minval=1, title='Signal Line Smoothing', group='Signal Line')
+smoType2  = input.string('EMA', 'Signal Line Method', options=['EMA','SMA','RMA','TMA'], group='Signal Line')
+signalCss = input(#ff5d00, 'Signal Color', group='Signal Line')
+
+// 超买 / 超卖
+obValue    = input.float(80, 'Overbought Level', group='OB/OS')
+obCss      = input(#089981, 'Overbought Color', group='OB/OS')
+obAreaCss  = input(color.new(#089981, 80), 'Overbought Fill', group='OB/OS')
+osValue    = input.float(20, 'Oversold Level', group='OB/OS')
+osCss      = input(#f23645, 'Oversold Color', group='OB/OS')
+osAreaCss  = input(color.new(#f23645, 80), 'Oversold Fill', group='OB/OS')
+
+// 背离设置
+leftBars  = input.int(2, 'Left Pivot Bars', group='Divergence')
+rightBars = input.int(2, 'Right Pivot Bars', group='Divergence')
+divLookback = input.int(50, 'Divergence Lookback Bars', group='Divergence')
+showDivLabels = input.bool(true, '显示背离标签', group='Divergence')
+
+//------------------------------------------------------------------------------
+// 均线函数
+//------------------------------------------------------------------------------
+ma(x, len, maType) =>
+    switch maType
+        'EMA' => ta.ema(x, len)
+        'SMA' => ta.sma(x, len)
+        'RMA' => ta.rma(x, len)
+        'TMA' => ta.sma(ta.sma(x, len), len)
+
+//------------------------------------------------------------------------------
+// 计算 Ultimate RSI
+//------------------------------------------------------------------------------
+upper = ta.highest(src, length)
+lower = ta.lowest(src, length)
+r     = upper - lower
+d     = src - src[1]
+diff  = upper > upper[1] ? r : lower < lower[1] ? -r : d
+
+num   = ma(diff, length, smoType1)
+den   = ma(math.abs(diff), length, smoType1)
+arsi  = num / den * 50 + 50
+
+signal = ma(arsi, smooth, smoType2)
+
+//------------------------------------------------------------------------------
+// 绘图
+//------------------------------------------------------------------------------
+plot_rsi = plot(arsi, 'Ultimate RSI',
+     color = arsi > obValue ? obCss : arsi < osValue ? osCss : autoCss ? chart.fg_color : arsiCss)
+
+plot(signal, 'Signal Line', color=signalCss)
+
+plot_ob = plot(obValue, color=color.new(obCss, 100), title="Overbought Level")
+plot_mid = plot(50, color=color.new(color.gray, 90), title="Midline")
+plot_os = plot(osValue, color=color.new(osCss, 100), title="Oversold Level")
+
+fill(plot_rsi, plot_ob, color = arsi > obValue ? obAreaCss : na)
+fill(plot_os, plot_rsi, color = arsi < osValue ? osAreaCss : na)
+
+//------------------------------------------------------------------------------
+// 信号逻辑
+//------------------------------------------------------------------------------
+buySignal = ta.crossover(arsi, osValue)
+sellSignal = ta.crossunder(arsi, obValue)
+crossUp = ta.crossover(arsi, signal)
+crossDown = ta.crossunder(arsi, signal)
+
+//------------------------------------------------------------------------------
+// 背离检测
+//------------------------------------------------------------------------------
+priceHigh = ta.pivothigh(high, leftBars, rightBars)
+priceLow  = ta.pivotlow(low, leftBars, rightBars)
+rsiHigh   = ta.pivothigh(arsi, leftBars, rightBars)
+rsiLow    = ta.pivotlow(arsi, leftBars, rightBars)
+
+// 看跌背离：价格创新高，RSI 没创新高
+bearDiv = na(priceHigh) ? false : (priceHigh > ta.valuewhen(priceHigh, priceHigh, 1) and rsiHigh < ta.valuewhen(rsiHigh, rsiHigh, 1))
+
+// 看涨背离：价格创新低，RSI 没创新低
+bullDiv = na(priceLow) ? false : (priceLow < ta.valuewhen(priceLow, priceLow, 1) and rsiLow > ta.valuewhen(rsiLow, rsiLow, 1))
+
+// 绘制背离标签
+if showDivLabels
+    if bullDiv
+        label.new(bar_index - rightBars, rsiLow, "🟢 Bull Div", style=label.style_label_up, color=color.new(color.green, 0), textcolor=color.white, yloc=yloc.price)
+    if bearDiv
+        label.new(bar_index - rightBars, rsiHigh, "🔴 Bear Div", style=label.style_label_down, color=color.new(color.red, 0), textcolor=color.white, yloc=yloc.price)
+
+//------------------------------------------------------------------------------
+// 警报条件
+//------------------------------------------------------------------------------
+if buySignal
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 超卖反弹, 可以考虑建仓，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+if sellSignal
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 超买回落, 可以考虑减仓，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+if crossUp
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 上穿信号线, 可以考虑建仓，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+if crossDown
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 下穿信号线, 可以考虑减仓，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+if bullDiv
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 看涨背离, 可考虑低吸，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+if bearDiv
+    alert('{ "desc": "' + str.tostring(syminfo.ticker) + ' 出现 RSI 看跌背离, 可考虑止盈/减仓，参考价格:' + str.tostring(close) + ' "}', alert.freq_once_per_bar_close)
+
+//------------------------------------------------------------------------------
+// 图形信号标记
+//------------------------------------------------------------------------------
+plotshape(buySignal,  title='Buy Signal',  style=shape.triangleup,   color=color.new(color.green, 0), location=location.bottom, size=size.tiny, text='BUY')
+plotshape(sellSignal, title='Sell Signal', style=shape.triangledown, color=color.new(color.red, 0),   location=location.top,    size=size.tiny, text='SELL')
+plotshape(crossUp,   title='Cross Up',   style=shape.circle, color=color.new(color.teal, 0), location=location.bottom, size=size.tiny)
+plotshape(crossDown, title='Cross Down', style=shape.circle, color=color.new(color.orange, 0), location=location.top, size=size.tiny)
