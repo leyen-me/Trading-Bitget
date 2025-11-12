@@ -1,13 +1,13 @@
-# 🚀 Trading LongPort
+# 🚀 Trading Bitget
 
-> 🧠 基于 **Python + LongPort OpenAPI SDK** 的高性能自动化交易服务，通过 **TradingView Webhook** 实现做多 / 做空策略的全自动执行。
+> 🧠 基于 **Python + Bitget API** 的高性能自动化交易服务，通过 **TradingView Webhook** 实现合约做多 / 做空策略的全自动执行。
 
 <div align="center">
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![TradingView](https://img.shields.io/badge/TradingView-Webhook-blue?logo=tradingview)](https://www.tradingview.com/)
-[![LongPort](https://img.shields.io/badge/LongPort-OpenAPI-orange)](https://open.longportapp.com/)
+[![Bitget](https://img.shields.io/badge/Bitget-Contract-FF6B00)](https://www.bitget.com/)
 
 </div>
 
@@ -15,20 +15,17 @@
 
 ## 🧩 项目简介
 
-Trading LongPort 实现了从 **TradingView 信号 → LongPort 实盘下单** 的完整链路。专注于美股市场，适用于趋势跟踪、均值回归、突破、AI 驱动等多种量化策略。
+Trading Bitget 实现了从 **TradingView 信号 → Bitget 合约实盘下单** 的完整链路。专注于加密货币合约交易，适用于趋势跟踪、均值回归、突破等多种量化策略。
 
 ### 🔧 功能特性
 
 | 功能               | 说明                                    |
 | :----------------- | :-------------------------------------- |
-| ✅ 自动交易执行    | 从 TradingView 信号到 LongPort 实盘下单 |
-| ✅ 限价单下单      | 使用盘口买一 / 卖一价提交 LO 订单       |
+| ✅ 自动交易执行    | 从 TradingView 信号到 Bitget 合约下单  |
+| ✅ 限价单下单      | 使用盘口买一 / 卖一价提交限价订单       |
 | ✅ 智能仓位控制    | 默认半仓，可配置比例                    |
 | ✅ 异步 & 重试机制 | 异步执行、自动重试、未成交订单自动取消  |
 | ✅ 安全机制        | 接口加密 + 敏感信息隔离                 |
-| ✅ AI 基本面分析   | 自动检测重大新闻或基本面事件            |
-| ✅ 多渠道推送      | 支持邮件 / QQ 群 消息推送               |
-| ✅ 价格缓存        | 高速下单，提高实盘性能                  |
 
 ---
 
@@ -49,12 +46,10 @@ Trading LongPort 实现了从 **TradingView 信号 → LongPort 实盘下单** �
 | 功能         | 描述                                |
 | :----------- | :---------------------------------- |
 | Webhook 接收 | 监听 TradingView 信号               |
-| 自动交易     | 执行 LongPort 下单逻辑              |
+| 自动交易     | 执行 Bitget 合约下单逻辑            |
 | 信号组合     | `buy+long`, `sell+short`, `flat` 等 |
 | 高可靠性     | 自动重试 + 异步执行                 |
 | 日志追踪     | 完整交易日志                        |
-| 缓存         | 价格 & 仓位缓存，加速下单           |
-| 消息推送     | 邮件 / QQ 群 通知                   |
 
 ---
 
@@ -77,8 +72,7 @@ TradingView → Webhook 请求示例：
 | :---------------- | :----------------------- | :----------------------- |
 | `action`          | `buy`, `sell`            | 交易动作                 |
 | `sentiment`       | `long`, `short`, `flat`  | 市场观点                 |
-| `ticker`          | 如 `TSLA`                | 股票代码（自动补 `.US`） |
-| `instrument`      | `stock`, `etf`, `option` | 交易标的类型             |
+| `ticker`          | 如 `BTCUSDT`             | 合约交易对符号           |
 | `price`           | 数值                     | 可传 TradingView 当前价  |
 | `stop_loss_price` | 数值                     | 可传止损价               |
 
@@ -100,15 +94,11 @@ TradingView → Webhook 请求示例：
 
 | 环境变量                 | 默认值  | 说明                   |
 | :----------------------- | :------ | :--------------------- |
-| `LONGPORT_APP_KEY`       | —       | LongPort 应用 Key      |
-| `LONGPORT_APP_SECRET`    | —       | LongPort 应用 Secret   |
-| `LONGPORT_ACCESS_TOKEN`  | —       | LongPort 访问令牌      |
+| `BITGET_API_KEY`         | —       | Bitget API Key         |
+| `BITGET_SECRET_KEY`      | —       | Bitget Secret Key      |
+| `BITGET_PASSPHRASE`      | —       | Bitget Passphrase      |
 | `WEBHOOK_EXPECTED_TOKEN` | `1234`  | 接口加密令牌           |
 | `MAX_PURCHASE_RATIO`     | `0.5`   | 最大买入比例           |
-| `ENABLE_PRICE_CACHE`     | `false` | 是否开启价格缓存       |
-| `ENABLE_NEWS_STREAM`     | `false` | 是否启用 AI 新闻分析   |
-| `ENABLE_EMAIL_MSG`       | `false` | 邮件推送               |
-| `ENABLE_QQ_MSG`          | `false` | QQ 群推送              |
 | ...                      | ...     | 更多请查看 `config.py` |
 
 </details>
@@ -140,9 +130,9 @@ TradingView → Webhook 请求示例：
 pip install -r requirements.txt
 
 # 2️⃣ 配置环境变量
-export LONGPORT_APP_KEY="xxx"
-export LONGPORT_APP_SECRET="xxx"
-export LONGPORT_ACCESS_TOKEN="xxx"
+export BITGET_API_KEY="xxx"
+export BITGET_SECRET_KEY="xxx"
+export BITGET_PASSPHRASE="xxx"
 
 # 3️⃣ 启动服务
 python app.py
@@ -164,71 +154,7 @@ curl -X POST http://localhost:8080/api/webhook \
   -d '{
     "action": "buy",
     "sentiment": "long",
-    "ticker": "TSLA",
-    "token": "1234"
-  }'
-```
-
-**响应示例**
-
-```json
-{ "status": "success" }
-```
-
-## 交易实例
-
-### `正股交易`
-
-```bash
-curl -X POST http://localhost:8080/api/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "buy",
-    "sentiment": "long",
-    "ticker": "TSLA",
-    "token": "1234"
-  }'
-```
-
-### `保证金交易`
-
-```bash
-curl -X POST http://localhost:8080/api/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "buy",
-    "sentiment": "long",
-    "ticker": "TSLA",
-    "token": "1234",
-    "is_margin": true,
-    "margin_rate": 1.2
-  }'
-```
-
-### `ETF 交易`
-
-```bash
-curl -X POST http://localhost:8080/api/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "buy",
-    "sentiment": "long",
-    "instrument": "etf",
-    "ticker": "TSLA",
-    "token": "1234"
-  }'
-```
-
-### `期权交易`
-
-```bash
-curl -X POST http://localhost:8080/api/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "buy",
-    "sentiment": "long",
-    "instrument": "option",
-    "ticker": "TSLA",
+    "ticker": "BTCUSDT",
     "token": "1234"
   }'
 ```
@@ -250,7 +176,7 @@ curl -X POST http://localhost:8080/api/webhook \
 
 <div align="center">
 
-Made with ❤️ by Rustaceans for Traders
-✨ Powering the next generation of AI-driven trading ✨
+Made with ❤️ for Traders
+✨ Powering automated contract trading on Bitget ✨
 
 </div>

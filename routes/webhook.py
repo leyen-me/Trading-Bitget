@@ -1,18 +1,14 @@
 from flask import Blueprint, request, jsonify
 import threading
 
-from longport.openapi import OrderSide
 from config import Config
 from lib.MyFlask import get_current_app
 from services.trade_service import (
     estimate_max_purchase_quantity,
     get_best_ask_price,
     get_best_bid_price,
-    handle_etf_signal,
-    handle_stock_signal,
-    handle_option_signal,
+    handle_contract_signal,
 )
-from utils.msg import send_text
 
 webhook_bp = Blueprint("webhook", __name__)
 
@@ -36,10 +32,7 @@ def receive_webhook():
         action = payload.get("action", "").lower()
         sentiment = payload.get("sentiment", "").lower()
         ticker = payload.get("ticker", "").upper()
-        instrument = payload.get("instrument", "stock").lower()
         price = payload.get("price")
-        is_margin = payload.get("is_margin", False)
-        margin_rate = payload.get("margin_rate", 1.2)
 
         # 参数校验
         if action not in ["buy", "sell"]:
@@ -54,14 +47,7 @@ def receive_webhook():
         def background_task():
             with app_context:
                 try:
-                    if instrument == "option":
-                        handle_option_signal(ticker, action, sentiment)
-                    elif instrument == "etf":
-                        handle_etf_signal(ticker, action, sentiment)
-                    else:
-                        handle_stock_signal(
-                            ticker, action, sentiment, price, is_margin, margin_rate
-                        )
+                    handle_contract_signal(ticker, action, sentiment, price)
                 except Exception as e:
                     get_current_app().logger.error(f"后台任务执行失败: {e}")
 
@@ -80,30 +66,12 @@ def test_estimate_max_purchase_quantity():
     payload = request.get_json()
     if not payload:
         return jsonify({"status": "error", "message": "无效请求"}), 400
-    action = payload.get("action", "").lower()
-    sentiment = payload.get("sentiment", "").lower()
     ticker = payload.get("ticker", "").upper()
-    ticker = ticker + ".US"
-    instrument = payload.get("instrument", "stock").lower()
     price = payload.get("price")
-    is_margin = payload.get("is_margin", False)
-    margin_rate = payload.get("margin_rate", 1.2)
-    max_buy = estimate_max_purchase_quantity(
-        ticker, OrderSide.Buy, get_best_ask_price(ticker), is_margin, margin_rate
-    )
-    max_sell = estimate_max_purchase_quantity(
-        ticker, OrderSide.Sell, get_best_bid_price(ticker), is_margin, margin_rate
-    )
+    if not price:
+        price = float(get_best_ask_price(ticker))
+    max_buy = estimate_max_purchase_quantity(ticker, "buy", price)
+    max_sell = estimate_max_purchase_quantity(ticker, "sell", price)
     return jsonify(
         {"status": "success", "max_buy": float(max_buy), "max_sell": float(max_sell)}
     )
-
-
-@webhook_bp.route("/send_to_qq_group", methods=["POST"])
-def send_to_qq_group_hook():
-    payload = request.get_json()
-    if not payload:
-        return jsonify({"status": "error", "message": "无效请求"}), 400
-    desc = payload.get("desc")
-    send_text(subject="技术分析", body=desc, enable_email=False)  # 只发到 QQ 群
-    return jsonify({"status": "success", "message": "已发送"})

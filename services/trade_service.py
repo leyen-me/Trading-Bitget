@@ -1,166 +1,104 @@
 from decimal import Decimal
 import time
 from config import Config
-from longport.openapi import (
-    OrderType,
-    OrderSide,
-    TimeInForceType,
-    OutsideRTH,
-    OrderStatus,
-)
-from services.option_service import select_best_options, select_nearest_option_date
 from utils.decorator import timed_api_call
+from utils.bitget_client import BitgetClient
 from lib.MyFlask import get_current_app
 
 
-@timed_api_call
-def get_current_position_quantity_by_api(symbol: str) -> Decimal:
-    """获取当前持仓数量"""
-    current_app = get_current_app()
-    try:
-        resp = current_app.trade_ctx.stock_positions()
-        for channel in resp.channels:
-            for pos in channel.positions:
-                if pos.symbol == symbol:
-                    return Decimal(str(pos.quantity))
-        return Decimal("0")
-    except Exception as e:
-        current_app.logger.error(f"获取持仓失败 {symbol}: {e}")
-        raise
-
-
-@timed_api_call
-def get_current_position_quantity_by_cache(symbol: str) -> Decimal:
-    """获取当前持仓数量"""
-    current_app = get_current_app()
-    try:
-        positions = current_app.positions
-        for pos in positions:
-            if pos.symbol == symbol:
-                return pos.quantity
-        return Decimal("0")
-    except Exception as e:
-        current_app.logger.error(f"获取持仓失败 {symbol}: {e}")
-        raise
+# Bitget 订单状态映射
+ORDER_STATUS_FILLED = "filled"
+ORDER_STATUS_PARTIAL_FILLED = "partially_filled"
+ORDER_STATUS_NEW = "new"
+ORDER_STATUS_PENDING = "pending"
 
 
 @timed_api_call
 def get_current_position_quantity(symbol: str) -> Decimal:
-    """获取当前持仓数量"""
-    use_cache = Config.ENABLE_PRICE_CACHE
-    if use_cache:
-        return get_current_position_quantity_by_cache(symbol)
-    return get_current_position_quantity_by_api(symbol)
-
-
-@timed_api_call
-def estimate_max_purchase_quantity_by_api(
-    symbol: str,
-    side: type[OrderSide],
-    price: Decimal,
-    is_margin: bool | None,
-) -> Decimal:
-    """估算最大可买入数量，margin_rate 会在系统内部自动计算"""
+    """获取当前持仓数量，正数表示多仓，负数表示空仓"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        result = current_app.trade_ctx.estimate_max_purchase_quantity(
-            symbol=symbol, order_type=OrderType.LO, side=side, price=price
-        )
-        if is_margin:
-            if side == OrderSide.Buy:
-                qty = result.margin_max_qty
-            else:
-                qty = result.cash_max_qty
-        else:
-            qty = result.cash_max_qty
-        return Decimal(str(int(qty * Decimal(Config.MAX_PURCHASE_RATIO))))
+        positions = client.get_all_positions()
+        if isinstance(positions, list):
+            for pos in positions:
+                if pos.get("symbol") == symbol:
+                    # 持仓方向: long 或 short
+                    hold_side = pos.get("holdSide", "")
+                    available = Decimal(str(pos.get("available", "0")))
+                    if hold_side == "long":
+                        return available
+                    elif hold_side == "short":
+                        return available * Decimal("-1")
+        return Decimal("0")
     except Exception as e:
-        current_app.logger.error(f"估算最大购买数量失败: {e}")
-        raise
-
-
-@timed_api_call
-def estimate_max_purchase_quantity_by_cache(
-    symbol: str,
-    side: type[OrderSide],
-    price: Decimal,
-    is_margin: bool | None,
-    margin_rate: float | None,
-) -> Decimal:
-    """估算最大可买入数量"""
-    current_app = get_current_app()
-    try:
-        # 获取现金
-        total_cash = current_app.total_cash
-        if is_margin:
-            qty = Decimal(int(total_cash * Decimal(str(margin_rate)) / price))
-        else:
-            qty = Decimal(int(total_cash / price))
-        return Decimal(str(qty * Decimal(Config.MAX_PURCHASE_RATIO)))
-    except Exception as e:
-        current_app.logger.error(f"估算最大购买数量失败: {e}")
+        current_app.logger.error(f"获取持仓失败 {symbol}: {e}")
         raise
 
 
 @timed_api_call
 def estimate_max_purchase_quantity(
     symbol: str,
-    side: type[OrderSide],
+    side: str,  # "buy" or "sell"
     price: Decimal,
-    is_margin: bool | None,
-    margin_rate: float | None,
 ) -> Decimal:
     """估算最大可买入数量"""
-    use_cache = Config.ENABLE_PRICE_CACHE
-    if use_cache:
-        return estimate_max_purchase_quantity_by_cache(
-            symbol, side, price, is_margin, margin_rate
-        )
-    return estimate_max_purchase_quantity_by_api(symbol, side, price, is_margin)
+    current_app = get_current_app()
+    client = current_app.bitget_client
+    
+    try:
+        # 获取账户信息
+        account_info = client.get_account_info()
+        if isinstance(account_info, list) and len(account_info) > 0:
+            available = Decimal(str(account_info[0].get("available", "0")))
+        elif isinstance(account_info, dict):
+            available = Decimal(str(account_info.get("available", "0")))
+        else:
+            available = Decimal("0")
+        
+        # 计算可开数量
+        max_qty = available * Decimal(Config.MAX_PURCHASE_RATIO) / price
+        return Decimal(str(int(max_qty)))
+    except Exception as e:
+        current_app.logger.error(f"估算最大购买数量失败: {e}")
+        raise
 
 
 @timed_api_call
 def cancel_all_pending_orders_for_symbol(symbol: str):
     """取消该标的的所有挂单"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        orders = current_app.trade_ctx.today_orders(symbol=symbol)
-        for order in orders:
-            if order.status in [
-                OrderStatus.WaitToNew,
-                OrderStatus.New,
-                OrderStatus.WaitToReplace,
-                OrderStatus.PendingReplace,
-                OrderStatus.PartialFilled,
-                OrderStatus.WaitToCancel,
-                OrderStatus.PendingCancel,
-            ]:
-                get_current_app().logger.info(
-                    f"取消挂单 | {order.order_id} | {order.symbol}"
-                )
-                current_app.trade_ctx.cancel_order(order.order_id)
+        orders = client.get_current_orders(symbol)
+        if isinstance(orders, list):
+            for order in orders:
+                order_id = order.get("orderId")
+                status = order.get("status", "")
+                if status in [ORDER_STATUS_NEW, ORDER_STATUS_PENDING, ORDER_STATUS_PARTIAL_FILLED]:
+                    current_app.logger.info(f"取消挂单 | {order_id} | {symbol}")
+                    client.cancel_order(symbol, order_id)
     except Exception as e:
-        get_current_app().logger.error(f"清理挂单失败: {e}")
+        current_app.logger.error(f"清理挂单失败: {e}")
 
 
 @timed_api_call
 def get_best_ask_price(symbol: str) -> Decimal:
     """获取卖一价（用于买入）"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        use_cache = Config.ENABLE_PRICE_CACHE
-        if use_cache:
-            has_symbol = current_app.depth_cache.get(symbol, None)
-            if has_symbol:
-                return Decimal(str(current_app.depth_cache[symbol].ask))
-
-        depth = current_app.quote_ctx.depth(symbol)
-        ask = depth.asks[0].price if depth.asks else None
-        if not ask:
-            raise ValueError("卖一价为空")
-        return Decimal(str(ask))
+        depth = client.get_depth(symbol, limit=5)
+        asks = depth.get("asks", [])
+        if asks and len(asks) > 0:
+            ask_price = asks[0][0]  # [price, quantity]
+            return Decimal(str(ask_price))
+        raise ValueError("卖一价为空")
     except Exception as e:
-        get_current_app().logger.error(f"获取卖一价失败 {symbol}: {e}")
+        current_app.logger.error(f"获取卖一价失败 {symbol}: {e}")
         raise
 
 
@@ -168,18 +106,15 @@ def get_best_ask_price(symbol: str) -> Decimal:
 def get_best_bid_price(symbol: str) -> Decimal:
     """获取买一价（用于卖出）"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        use_cache = Config.ENABLE_PRICE_CACHE
-        if use_cache:
-            has_symbol = current_app.depth_cache.get(symbol, None)
-            if has_symbol:
-                return Decimal(str(current_app.depth_cache[symbol].bid))
-
-        depth = current_app.quote_ctx.depth(symbol)
-        bid = depth.bids[0].price if depth.bids else None
-        if not bid:
-            raise ValueError("买一价为空")
-        return Decimal(str(bid))
+        depth = client.get_depth(symbol, limit=5)
+        bids = depth.get("bids", [])
+        if bids and len(bids) > 0:
+            bid_price = bids[0][0]  # [price, quantity]
+            return Decimal(str(bid_price))
+        raise ValueError("买一价为空")
     except Exception as e:
         current_app.logger.error(f"获取买一价失败 {symbol}: {e}")
         raise
@@ -188,29 +123,30 @@ def get_best_bid_price(symbol: str) -> Decimal:
 @timed_api_call
 def submit_limit_order(
     symbol: str,
-    side: type[OrderSide],
+    side: str,  # "open_long", "open_short", "close_long", "close_short"
     submitted_quantity: Decimal,
     submitted_price: Decimal,
 ) -> str:
     """提交限价单，返回 order_id"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
         current_app.logger.info(
             f"提交限价单 | {symbol} {side} {submitted_quantity} @ {submitted_price}"
         )
-        resp = current_app.trade_ctx.submit_order(
+        result = client.place_order(
             symbol=symbol,
-            order_type=OrderType.LO,
             side=side,
-            submitted_quantity=submitted_quantity,
-            submitted_price=submitted_price,
-            time_in_force=TimeInForceType.GoodTilCanceled,
-            outside_rth=OutsideRTH.AnyTime,
+            order_type="limit",
+            size=str(int(submitted_quantity)),
+            price=str(submitted_price),
         )
+        order_id = result.get("orderId", "")
         current_app.logger.info(
-            f"订单已提交 | ID={resp.order_id} | {side} {submitted_quantity} @ {submitted_price}"
+            f"订单已提交 | ID={order_id} | {side} {submitted_quantity} @ {submitted_price}"
         )
-        return resp.order_id
+        return order_id
     except Exception as e:
         current_app.logger.error(f"下单失败 {symbol}: {e}")
         raise
@@ -219,63 +155,38 @@ def submit_limit_order(
 @timed_api_call
 def submit_market_order(
     symbol: str,
-    side: type[OrderSide],
+    side: str,  # "open_long", "open_short", "close_long", "close_short"
     submitted_quantity: Decimal,
 ) -> str:
     """提交市价单，返回 order_id"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        resp = current_app.trade_ctx.submit_order(
+        result = client.place_order(
             symbol=symbol,
-            order_type=OrderType.MO,
             side=side,
-            submitted_quantity=submitted_quantity,
-            time_in_force=TimeInForceType.GoodTilCanceled,
-            outside_rth=OutsideRTH.AnyTime,
+            order_type="market",
+            size=str(int(submitted_quantity)),
         )
+        order_id = result.get("orderId", "")
         current_app.logger.info(
-            f"市价单已提交 | ID={resp.order_id} | {side} {submitted_quantity}"
+            f"市价单已提交 | ID={order_id} | {side} {submitted_quantity}"
         )
-        return resp.order_id
+        return order_id
     except Exception as e:
         current_app.logger.error(f"下单失败 {symbol}: {e}")
         raise
 
 
-@timed_api_call
-def submit_stop_order(
-    symbol: str,
-    side: type[OrderSide],
-    submitted_quantity: Decimal,
-    trigger_price: Decimal,
-) -> str:
-    """提交市价止损单"""
-    current_app = get_current_app()
-    try:
-        resp = current_app.trade_ctx.submit_order(
-            symbol=symbol,
-            order_type=OrderType.MIT,
-            side=side,
-            submitted_quantity=submitted_quantity,
-            trigger_price=trigger_price,
-            time_in_force=TimeInForceType.GoodTilCanceled,
-            outside_rth=OutsideRTH.AnyTime,
-        )
-        current_app.logger.info(
-            f"止损订单已提交 | ID={resp.order_id} | {side} {submitted_quantity} @ {trigger_price}"
-        )
-        return resp.order_id
-    except Exception as e:
-        current_app.logger.error(f"下单失败 {symbol}: {e}")
-        raise
-
-
-def check_order_status(order_id: str) -> type[OrderStatus]:
+def check_order_status(order_id: str, symbol: str) -> str:
     """检查订单状态"""
     current_app = get_current_app()
+    client = current_app.bitget_client
+    
     try:
-        detail = current_app.trade_ctx.order_detail(order_id)
-        return detail.status
+        detail = client.get_order_detail(symbol, order_id)
+        return detail.get("status", "")
     except Exception as e:
         current_app.logger.error(f"检查订单状态失败 {order_id}: {e}")
         raise
@@ -298,31 +209,31 @@ def validate_order_price_or_qty(price: Decimal, quantity: Decimal):
 def wait_and_check_order(order_id: str, symbol: str) -> bool:
     """等待并检查订单状态，如果未成交则撤单"""
     logger = get_current_app().logger
-    trade_ctx = get_current_app().trade_ctx
+    client = get_current_app().bitget_client
 
     # 等待一段时间观察订单成交情况
     time.sleep(Config.ORDER_CHECK_INTERVAL)
 
     try:
-        status = check_order_status(order_id)
+        status = check_order_status(order_id, symbol)
 
         # 如果订单已全部成交
-        if status == OrderStatus.Filled:
+        if status == ORDER_STATUS_FILLED:
             logger.info(f"✅ 订单已全部成交 | {order_id}")
             return True
 
         # 如果订单部分成交
-        elif status == OrderStatus.PartialFilled:
+        elif status == ORDER_STATUS_PARTIAL_FILLED:
             logger.info(f"🟡 订单部分成交 | {order_id}")
             # 取消未成交部分
-            trade_ctx.cancel_order(order_id)
+            client.cancel_order(symbol, order_id)
             logger.info(f"已取消未成交部分 | {order_id}")
             return False
 
         # 如果订单未成交
         else:
             # 取消订单
-            trade_ctx.cancel_order(order_id)
+            client.cancel_order(symbol, order_id)
             logger.info(f"已取消未成交订单 | {order_id} | 状态: {status}")
             return False
 
@@ -331,14 +242,12 @@ def wait_and_check_order(order_id: str, symbol: str) -> bool:
         return False
 
 
-def do_stock_long(
+def do_contract_long(
     symbol: str,
     price: float | None = None,
-    is_margin: bool | None = False,
-    margin_rate: float | None = None,
     is_validate_order_price_or_qty: bool = True,
 ):
-    """执行做多操作"""
+    """执行做多操作（开多仓）"""
     logger = get_current_app().logger
     logger.info(f"开始做多 | {symbol}")
 
@@ -349,29 +258,25 @@ def do_stock_long(
         price_decimal = get_best_ask_price(symbol)
         logger.info(f"使用市场价格 | {price_decimal}")
 
-    quantity = estimate_max_purchase_quantity(
-        symbol, OrderSide.Buy, price_decimal, is_margin, margin_rate
-    )
+    quantity = estimate_max_purchase_quantity(symbol, "buy", price_decimal)
 
     if is_validate_order_price_or_qty:
         validate_order_price_or_qty(price_decimal, quantity)
 
-    # 提交订单
-    order_id = submit_limit_order(symbol, OrderSide.Buy, quantity, price_decimal)
+    # 提交订单（开多仓）
+    order_id = submit_limit_order(symbol, "open_long", quantity, price_decimal)
     logger.info(f"限价单已提交 | 订单ID: {order_id}")
 
     # 等待并检查订单状态
     wait_and_check_order(order_id, symbol)
 
 
-def do_stock_short(
+def do_contract_short(
     symbol: str,
     price: float | None = None,
-    is_margin: bool | None = False,
-    margin_rate: float | None = None,
     is_validate_order_price_or_qty: bool = True,
 ):
-    """执行做空操作"""
+    """执行做空操作（开空仓）"""
     logger = get_current_app().logger
     logger.info(f"开始做空 | {symbol}")
 
@@ -382,26 +287,32 @@ def do_stock_short(
         price_decimal = get_best_bid_price(symbol)
         logger.info(f"使用市场价格 | {price_decimal}")
 
-    quantity = estimate_max_purchase_quantity(
-        symbol, OrderSide.Sell, price_decimal, is_margin, margin_rate
-    )
+    quantity = estimate_max_purchase_quantity(symbol, "sell", price_decimal)
 
     if is_validate_order_price_or_qty:
         validate_order_price_or_qty(price_decimal, quantity)
 
-    # 提交订单
-    order_id = submit_limit_order(symbol, OrderSide.Sell, quantity, price_decimal)
+    # 提交订单（开空仓）
+    order_id = submit_limit_order(symbol, "open_short", quantity, price_decimal)
     logger.info(f"限价单已提交 | 订单ID: {order_id}")
 
     # 等待并检查订单状态
     wait_and_check_order(order_id, symbol)
 
 
-def do_stock_close(symbol: str, side: str, quantity: int, price: float | None = None):
+def do_contract_close(symbol: str, side: str, quantity: Decimal, price: float | None = None):
+    """平仓操作"""
     logger = get_current_app().logger
-    logger.info(f"开始平仓 | {symbol} | {side.upper()} {quantity} 股")
+    logger.info(f"开始平仓 | {symbol} | {side.upper()} {quantity}")
 
-    order_side = OrderSide.Buy if side == "buy" else OrderSide.Sell
+    # 确定平仓方向
+    # side: "long" 表示平多仓 -> close_long, "short" 表示平空仓 -> close_short
+    if side.lower() == "long":
+        close_side = "close_long"
+    elif side.lower() == "short":
+        close_side = "close_short"
+    else:
+        raise ValueError(f"无效的平仓方向: {side}")
 
     # 如果指定了价格，使用指定价格
     if price:
@@ -409,107 +320,51 @@ def do_stock_close(symbol: str, side: str, quantity: int, price: float | None = 
         logger.info(f"使用指定价格 | {target_price}")
     else:
         # 获取目标价格
-        target_price = (
-            get_best_bid_price(symbol)
-            if order_side == OrderSide.Sell
-            else get_best_ask_price(symbol)
-        )
+        if close_side == "close_long":
+            # 平多仓，用买一价
+            target_price = get_best_bid_price(symbol)
+        else:
+            # 平空仓，用卖一价
+            target_price = get_best_ask_price(symbol)
         logger.info(f"使用市场价格 | {target_price}")
 
     # 提交限价单
-    order_id = submit_limit_order(
-        symbol, order_side, Decimal(str(quantity)), target_price
-    )
+    order_id = submit_limit_order(symbol, close_side, quantity, target_price)
     logger.info(f"限价平仓单已提交 | 订单ID: {order_id}")
 
     # 等待并检查订单状态
     if not wait_and_check_order(order_id, symbol):
         # 如果限价单未成交，改用市价单
         logger.info(f"限价单未完全成交，改用市价单平仓 | {symbol}")
-        target_price = (
-            get_best_bid_price(symbol)
-            if order_side == OrderSide.Sell
-            else get_best_ask_price(symbol)
-        )
-        market_order_id = submit_limit_order(
-            symbol, order_side, Decimal(str(quantity)), target_price
-        )
+        market_order_id = submit_market_order(symbol, close_side, quantity)
         logger.info(f"市价平仓单已提交 | 订单ID: {market_order_id}")
 
 
-def handle_stock_signal(
+def handle_contract_signal(
     symbol: str,
     action: str,
     sentiment: str,
     price: float | None = None,
-    is_margin: bool | None = False,
-    margin_rate: float | None = None,
 ):
-    """主入口：处理股票信号"""
+    """主入口：处理合约信号"""
     logger = get_current_app().logger
-    full_symbol = f"{symbol}.US"
-    logger.info(f"处理股票信号 | {full_symbol} | {action} {sentiment}")
-
-    current_position = get_current_position_quantity(full_symbol)
+    logger.info(f"处理合约信号 | {symbol} | {action} {sentiment}")
 
     if action == "buy" and sentiment == "long":
-        do_stock_long(full_symbol, price, is_margin, margin_rate)
+        # 做多：开多仓
+        do_contract_long(symbol, price)
     elif action == "sell" and sentiment == "short":
-        do_stock_short(full_symbol, price, is_margin, margin_rate)
+        # 做空：开空仓
+        do_contract_short(symbol, price)
     elif sentiment == "flat":
-        if current_position != 0:
-            logger.info("收到平仓信号，准备平仓")
-            close_side = "sell" if current_position > 0 else "buy"
-            abs_qty = int(abs(current_position))
-            do_stock_close(full_symbol, close_side, abs_qty, price)
+        # 获取当前持仓
+        current_position = get_current_position_quantity(symbol)
+        # 平仓
+        if current_position > 0:
+            logger.info("收到平仓信号，准备平多仓")
+            do_contract_close(symbol, "long", abs(current_position), price)
+        elif current_position < 0:
+            logger.info("收到平仓信号，准备平空仓")
+            do_contract_close(symbol, "short", abs(current_position), price)
         else:
             logger.info("已是空仓，无需平仓")
-
-
-def handle_option_signal(symbol: str, action: str, sentiment: str):
-    """处理期权信号"""
-    app = get_current_app()
-    logger = app.logger
-
-    full_symbol = f"{symbol}.US"
-    logger.info(f"处理股票信号 | {full_symbol} | {action} {sentiment}")
-
-    selected_options = {}
-    if (
-        action == "buy"
-        and sentiment == "long"
-        or action == "sell"
-        and sentiment == "short"
-    ):
-        date_list = app.quote_ctx.option_chain_expiry_date_list(full_symbol)
-        selected_date = select_nearest_option_date(date_list, symbol)
-
-        logger.info(f"选择的期权合约日期: {selected_date}")
-        if selected_date is None:
-            logger.info("没有找到合适的期权合约")
-            return
-
-        option_list = app.quote_ctx.option_chain_info_by_date(
-            full_symbol, selected_date
-        )
-        # 选择合适的期权
-        selected_options = select_best_options(app, full_symbol, option_list)
-
-        if selected_options is None:
-            logger.info("没有找到合适的期权合约")
-            return
-
-    if action == "buy" and sentiment == "long":
-        do_stock_long(selected_options.get("call", {}).get("symbol"), is_validate_order_price_or_qty=False)
-    elif action == "sell" and sentiment == "short":
-        do_stock_long(selected_options.get("put", {}).get("symbol"), is_validate_order_price_or_qty=False)
-    elif sentiment == "flat":
-        resp = app.trade_ctx.stock_positions()
-        for channel in resp.channels:
-            for pos in channel.positions:
-                if symbol in pos.symbol:
-                    do_stock_close(pos.symbol, "sell", quantity=int(pos.quantity))
-
-
-def handle_etf_signal(symbol: str, action: str, sentiment: str):
-    pass

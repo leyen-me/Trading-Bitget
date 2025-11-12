@@ -1,4 +1,5 @@
 from lib.MyFlask import MyFlask
+from utils.bitget_client import BitgetClient
 
 from utils.register import (
     setup_blueprint,
@@ -6,7 +7,6 @@ from utils.register import (
     setup_home,
     setup_error_handlers,
     setup_logging,
-    setup_scheduled_tasks,
 )
 
 
@@ -17,8 +17,15 @@ def create_app():
     setup_home(app)
     setup_error_handlers(app)
     setup_blueprint(app)
-    setup_scheduled_tasks(app)
-    app.logger.info("✅ Longport SDK 初始化成功")
+    
+    # 初始化 Bitget 客户端
+    try:
+        app.bitget_client = BitgetClient()
+        app.logger.info("✅ Bitget API 初始化成功")
+    except Exception as e:
+        app.logger.error(f"❌ Bitget API 初始化失败: {e}")
+        raise
+    
     return app
 
 
