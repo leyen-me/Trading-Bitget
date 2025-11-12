@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trading LongPort - 精准量化交易平台</title>
+    <title>Trading Bitget - 精准量化交易平台</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
@@ -1249,7 +1249,7 @@
         <nav>
           <a href="#" class="logo">
             <div class="logo-icon">📊</div>
-            <span>Trading LongPort</span>
+            <span>Trading Bitget</span>
           </a>
           <ul class="nav-links">
             <li><a href="#features">功能特性</a></li>
@@ -1266,7 +1266,7 @@
               <i class="fas fa-moon"></i>
             </button>
             <a
-              href="https://github.com/leyen-me/Trading-LongPort"
+              href="https://github.com"
               class="btn-primary"
               target="_blank"
             >
@@ -1293,8 +1293,8 @@
           <span class="gradient-text">你的交易策略</span>
         </h1>
         <p class="lead">
-          Trading LongPort 是专为 Python
-          开发者打造的高性能量化交易框架，无缝集成 LongPort API，
+          Trading Bitget 是专为 Python
+          开发者打造的高性能量化交易框架，无缝集成 Bitget 合约 API，
           让你专注于策略本身，而非基础设施。
         </p>
         <div class="hero-actions">
@@ -1303,7 +1303,7 @@
             开始交易
           </a>
           <a
-            href="https://github.com/leyen-me/Trading-LongPort"
+            href="https://github.com"
             class="btn-secondary"
             target="_blank"
           >
@@ -1324,7 +1324,9 @@
               <div class="code-title">快速开始</div>
             </div>
             <div class="code-content" id="typing-code"># 1. 配置环境变量
-export LONGPORT_API_KEY="your_key"
+export BITGET_API_KEY="your_key"
+export BITGET_SECRET_KEY="your_secret"
+export BITGET_PASSPHRASE="your_passphrase"
 
 # 2. 安装依赖
 pip install -r requirements.txt
@@ -1343,7 +1345,7 @@ python app.py
       <div class="container">
         <div class="section-header">
           <div class="section-label">核心优势</div>
-          <h2 class="section-title">为什么选择 Trading LongPort？</h2>
+          <h2 class="section-title">为什么选择 Trading Bitget？</h2>
           <p class="section-desc">
             专为量化交易者设计的完整解决方案，从策略开发到实盘执行一站式支持
           </p>
@@ -1416,19 +1418,19 @@ python app.py
               <div class="form-group">
                 <label for="ticker-input" class="form-label">
                   <i class="fas fa-chart-line"></i>
-                  <span>Ticker Symbol</span>
+                  <span>合约交易对</span>
                 </label>
                 <input
                   type="text"
                   id="ticker-input"
                   class="form-input"
-                  placeholder="TSLA"
-                  value="TSLA"
+                  placeholder="BTCUSDT"
+                  value="BTCUSDT"
                   autocomplete="off"
                 />
                 <div class="form-hint" id="ticker-hint">
                   <i class="fas fa-info-circle"></i>
-                  输入股票代码，如 AAPL, QQQ, SPY
+                  输入合约交易对符号，如 BTCUSDT, ETHUSDT
                 </div>
               </div>
 
@@ -1448,6 +1450,49 @@ python app.py
                 <div class="form-hint" id="token-hint">
                   <i class="fas fa-shield-alt"></i>
                   令牌将加密存储于本地
+                </div>
+              </div>
+
+              <!-- 杠杆倍数输入 -->
+              <div class="form-group">
+                <label for="leverage-input" class="form-label">
+                  <i class="fas fa-percentage"></i>
+                  <span>杠杆倍数</span>
+                </label>
+                <input
+                  type="text"
+                  id="leverage-input"
+                  class="form-input"
+                  placeholder="2"
+                  value="2"
+                  autocomplete="off"
+                />
+                <div class="form-hint" id="leverage-hint">
+                  <i class="fas fa-info-circle"></i>
+                  默认 2 倍杠杆，可自定义（如 2, 5, 10）
+                </div>
+              </div>
+
+              <!-- 逐仓比例输入 -->
+              <div class="form-group">
+                <label for="position-ratio-input" class="form-label">
+                  <i class="fas fa-chart-pie"></i>
+                  <span>逐仓比例</span>
+                </label>
+                <input
+                  type="number"
+                  id="position-ratio-input"
+                  class="form-input"
+                  placeholder="0.1"
+                  value="0.1"
+                  step="0.01"
+                  min="0.01"
+                  max="1"
+                  autocomplete="off"
+                />
+                <div class="form-hint" id="position-ratio-hint">
+                  <i class="fas fa-info-circle"></i>
+                  默认 0.1 (10%)，表示每笔交易占账户的 10%
                 </div>
               </div>
 
@@ -1514,12 +1559,12 @@ python app.py
         <div class="cta-content">
           <h2>加入我们的开发者社区</h2>
           <p>
-            已有 <strong>237+</strong> 位开发者使用 Trading LongPort
+            已有 <strong>237+</strong> 位开发者使用 Trading Bitget
             构建自动化交易系统。
             立即开始你的量化交易之旅，与社区一起探索更多可能。
           </p>
           <a
-            href="https://github.com/leyen-me/Trading-LongPort"
+            href="https://github.com/leyen-me/Trading-Bitget"
             class="btn-primary"
             target="_blank"
           >
@@ -1535,14 +1580,14 @@ python app.py
       <div class="container">
         <div class="footer-content">
           <p class="footer-text">
-            © 2025 Trading LongPort. Built with ❤️ for Quant Traders.
+            © 2025 Trading Bitget. Built with ❤️ for Quant Traders.
           </p>
           <ul class="footer-links">
             <li><a href="#">文档</a></li>
             <li><a href="#">API</a></li>
             <li>
               <a
-                href="https://github.com/leyen-me/Trading-LongPort"
+                href="https://github.com"
                 target="_blank"
                 >GitHub</a
               >
@@ -1618,54 +1663,83 @@ python app.py
         observer.observe(card);
       });
 
-      // === Ticker & Token 管理 ===
+      // === 表单输入管理 ===
       const TICKER_INPUT = document.getElementById("ticker-input");
       const TOKEN_INPUT = document.getElementById("token-input");
+      const LEVERAGE_INPUT = document.getElementById("leverage-input");
+      const POSITION_RATIO_INPUT = document.getElementById("position-ratio-input");
       const RESPONSE_EL = document.getElementById("response");
 
       // 从 localStorage 加载
       const savedTicker =
-        localStorage.getItem("trading_longport_ticker") || "TSLA";
-      const savedToken = localStorage.getItem("trading_longport_token") || "";
+        localStorage.getItem("trading_bitget_ticker") || "BTCUSDT";
+      const savedToken = localStorage.getItem("trading_bitget_token") || "";
+      const savedLeverage = localStorage.getItem("trading_bitget_leverage") || "2";
+      const savedPositionRatio = localStorage.getItem("trading_bitget_position_ratio") || "0.1";
 
       TICKER_INPUT.value = savedTicker;
       TOKEN_INPUT.value = savedToken;
+      LEVERAGE_INPUT.value = savedLeverage;
+      POSITION_RATIO_INPUT.value = savedPositionRatio;
 
       // 监听输入变化并保存
       TICKER_INPUT.addEventListener("input", () => {
         localStorage.setItem(
-          "trading_longport_ticker",
+          "trading_bitget_ticker",
           TICKER_INPUT.value.trim()
         );
       });
 
       TOKEN_INPUT.addEventListener("input", () => {
         localStorage.setItem(
-          "trading_longport_token",
+          "trading_bitget_token",
           TOKEN_INPUT.value.trim()
         );
       });
 
+      LEVERAGE_INPUT.addEventListener("input", () => {
+        localStorage.setItem(
+          "trading_bitget_leverage",
+          LEVERAGE_INPUT.value.trim()
+        );
+      });
+
+      POSITION_RATIO_INPUT.addEventListener("input", () => {
+        localStorage.setItem(
+          "trading_bitget_position_ratio",
+          POSITION_RATIO_INPUT.value.trim()
+        );
+      });
+
       // === 发送订单请求 ===
-      const API_URL = "/webhook";
+      const API_URL = "/api/webhook";
       let toastTimeout;
 
       function sendOrder(action, sentiment) {
-        const ticker = TICKER_INPUT.value.trim();
+        const ticker = TICKER_INPUT.value.trim().toUpperCase();
         const token = TOKEN_INPUT.value.trim();
+        const leverage = LEVERAGE_INPUT.value.trim() || "2";
+        const positionRatio = parseFloat(POSITION_RATIO_INPUT.value.trim()) || 0.1;
+        
         const tickerHint = document.getElementById('ticker-hint');
         const tokenHint = document.getElementById('token-hint');
+        const leverageHint = document.getElementById('leverage-hint');
+        const positionRatioHint = document.getElementById('position-ratio-hint');
 
         // 重置错误状态
         TICKER_INPUT.classList.remove('error');
         TOKEN_INPUT.classList.remove('error');
+        LEVERAGE_INPUT.classList.remove('error');
+        POSITION_RATIO_INPUT.classList.remove('error');
         tickerHint.classList.remove('error');
         tokenHint.classList.remove('error');
+        leverageHint.classList.remove('error');
+        positionRatioHint.classList.remove('error');
 
         // 校验输入
         if (!ticker) {
           TICKER_INPUT.classList.add('error');
-          tickerHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 请输入股票代码';
+          tickerHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 请输入合约交易对符号';
           tickerHint.classList.add('error');
           TICKER_INPUT.focus();
           return;
@@ -1677,12 +1751,35 @@ python app.py
           TOKEN_INPUT.focus();
           return;
         }
+        if (!leverage || isNaN(leverage) || parseFloat(leverage) <= 0) {
+          LEVERAGE_INPUT.classList.add('error');
+          leverageHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 请输入有效的杠杆倍数';
+          leverageHint.classList.add('error');
+          LEVERAGE_INPUT.focus();
+          return;
+        }
+        if (isNaN(positionRatio) || positionRatio <= 0 || positionRatio > 1) {
+          POSITION_RATIO_INPUT.classList.add('error');
+          positionRatioHint.innerHTML = '<i class="fas fa-exclamation-circle"></i> 逐仓比例必须在 0.01 到 1 之间';
+          positionRatioHint.classList.add('error');
+          POSITION_RATIO_INPUT.focus();
+          return;
+        }
 
         // 重置正常提示
-        tickerHint.innerHTML = '<i class="fas fa-info-circle"></i> 输入股票代码，如 AAPL, QQQ, SPY';
+        tickerHint.innerHTML = '<i class="fas fa-info-circle"></i> 输入合约交易对符号，如 BTCUSDT, ETHUSDT';
         tokenHint.innerHTML = '<i class="fas fa-shield-alt"></i> 令牌将加密存储于本地';
+        leverageHint.innerHTML = '<i class="fas fa-info-circle"></i> 默认 2 倍杠杆，可自定义（如 2, 5, 10）';
+        positionRatioHint.innerHTML = '<i class="fas fa-info-circle"></i> 默认 0.1 (10%)，表示每笔交易占账户的 10%';
 
-        const data = { ticker, action, sentiment, token };
+        const data = { 
+          ticker, 
+          action, 
+          sentiment, 
+          token,
+          leverage: leverage,
+          position_ratio: positionRatio
+        };
         
         // 显示加载状态
         showToast('loading', '正在发送请求...');
