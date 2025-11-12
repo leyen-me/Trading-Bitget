@@ -1,14 +1,16 @@
-from typing import cast
+from typing import cast, TYPE_CHECKING
 from flask import Flask
 from flask import current_app
-from utils.bitget_client import BitgetClient
+
+if TYPE_CHECKING:
+    from utils.bitget_client import BitgetClient
 
 
 class MyFlask(Flask):
     """
     自定义的 Flask 对象，用于保存全局变量
     """
-    bitget_client: BitgetClient = None
+    bitget_client: "BitgetClient" = None
 
     def _get_current_object(self) -> "MyFlask":
         return (

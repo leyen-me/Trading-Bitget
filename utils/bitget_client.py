@@ -6,7 +6,6 @@ import json
 import requests
 from typing import Optional, Dict, Any
 from config import Config
-from lib.MyFlask import get_current_app
 
 
 class BitgetClient:
@@ -34,7 +33,7 @@ class BitgetClient:
     def _get_headers(self, method: str, request_path: str, body: str = "") -> Dict[str, str]:
         """获取请求头"""
         timestamp = str(int(time.time() * 1000))
-        sign = self._sign(timestamp, method, request_path, body)
+        sign = self._sign(timestamp, method, request_path, body)        
         
         return {
             "ACCESS-KEY": self.api_key,
@@ -42,7 +41,7 @@ class BitgetClient:
             "ACCESS-TIMESTAMP": timestamp,
             "ACCESS-PASSPHRASE": self.passphrase,
             "Content-Type": "application/json",
-            "locale": "zh-CN"
+            "locale": "en-US"
         }
     
     def _request(self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -61,9 +60,10 @@ class BitgetClient:
         url = f"{self.base_url}{request_path}"
         headers = self._get_headers(method, request_path, body)
         
+        
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers)
             elif method == "POST":
                 response = requests.post(url, headers=headers, json=data)
             elif method == "PUT":
@@ -81,24 +81,40 @@ class BitgetClient:
             
             return result.get("data", result)
         except requests.exceptions.RequestException as e:
+            # 延迟导入避免循环导入
+            from lib.MyFlask import get_current_app
             get_current_app().logger.error(f"Bitget API 请求失败: {e}")
             raise
     
-    def get_account_info(self, product_type: str = "USDT-FUTURES") -> Dict[str, Any]:
-        """获取账户信息"""
-        return self._request("GET", f"/api/mix/v1/account/accounts?productType={product_type}")
-    
-    def get_position(self, symbol: str, product_type: str = "USDT-FUTURES") -> Dict[str, Any]:
-        """获取单个合约仓位信息"""
-        return self._request("GET", f"/api/mix/v1/position/singlePosition-v2", params={
-            "symbol": symbol,
+    def get_account_info(self, product_type: str = "umcbl") -> Dict[str, Any]:
+        """
+        获取账户信息
+        
+        Args:
+            product_type: 产品线类型，可选值：
+                - umcbl: USDT专业合约（默认）
+                - dmcbl: 混合合约
+                - cmcbl: USDC专业合约
+                - sumcbl: USDT专业合约模拟盘
+                - sdmcbl: 混合合约模拟盘
+                - scmcbl: USDC专业合约模拟盘
+        """
+        return self._request("GET", "/api/mix/v1/account/accounts", params={
             "productType": product_type
         })
     
-    def get_all_positions(self, product_type: str = "USDT-FUTURES") -> Dict[str, Any]:
+    def get_position(self, symbol: str, margin_coin: str = "USDT") -> Dict[str, Any]:
+        """获取单个合约仓位信息"""
+        return self._request("GET", f"/api/mix/v1/position/singlePosition-v2", params={
+            "symbol": symbol,
+            "marginCoin": margin_coin
+        })
+    
+    def get_all_positions(self, product_type: str = "umcbl", margin_coin: str = "USDT") -> Dict[str, Any]:
         """获取全部合约仓位信息"""
         return self._request("GET", f"/api/mix/v1/position/allPosition-v2", params={
-            "productType": product_type
+            "productType": product_type,
+            "marginCoin": margin_coin
         })
     
     def get_ticker(self, symbol: str) -> Dict[str, Any]:
@@ -121,18 +137,18 @@ class BitgetClient:
         order_type: str,  # "limit", "market"
         size: str,
         price: Optional[str] = None,
-        product_type: str = "USDT-FUTURES",
+        product_type: str = "umcbl",
+        margin_coin: str = "USDT",
         margin_mode: str = "isolated",  # "isolated" or "crossed"
         leverage: Optional[str] = None,
     ) -> Dict[str, Any]:
         """下单"""
         data = {
             "symbol": symbol,
-            "marginMode": margin_mode,
+            "marginCoin": margin_coin,
             "side": side,
             "orderType": order_type,
             "size": str(size),
-            "productType": product_type,
         }
         
         if order_type == "limit" and price:
@@ -169,31 +185,46 @@ class BitgetClient:
     
     def get_openable_size(
         self, 
-        symbol: str, 
-        product_type: str = "USDT-FUTURES", 
-        margin_mode: str = "isolated",
-        leverage: str = "2"
+        symbol: str,
+        margin_coin: str,
+        open_price: str,
+        open_amount: str,
+        leverage: Optional[str] = None
     ) -> Dict[str, Any]:
-        """获取可开数量"""
-        return self._request("GET", "/api/mix/v1/account/open-count", params={
-            "symbol": symbol,
-            "productType": product_type,
-            "marginMode": margin_mode,
-            "leverage": leverage
-        })
+        """
+        获取可开数量
+        
+        Args:
+            symbol: 产品ID，必须大写，如 "SBTCSUSDT_SUMCBL"
+            margin_coin: 保证金币种，如 "SUSDT" 或 "USDT"
+            open_price: 开仓价格
+            open_amount: 开仓金额
+            leverage: 杠杆倍数（可选，默认20）
+        
+        Returns:
+            Dict: 包含 openCount 的响应数据
+        """
+        data = {
+            "symbol": symbol.upper(),  # 确保大写
+            "marginCoin": margin_coin,
+            "openPrice": open_price,
+            "openAmount": open_amount
+        }
+        
+        if leverage:
+            data["leverage"] = leverage
+        
+        return self._request("POST", "/api/mix/v1/account/open-count", data=data)
     
     def set_leverage(
         self,
         symbol: str,
         leverage: str,
-        product_type: str = "USDT-FUTURES",
-        margin_mode: str = "isolated"
+        margin_coin: str = "USDT",
     ) -> Dict[str, Any]:
         """设置杠杆倍数"""
         return self._request("POST", "/api/mix/v1/account/setLeverage", data={
             "symbol": symbol,
+            "marginCoin": margin_coin,
             "leverage": leverage,
-            "productType": product_type,
-            "marginMode": margin_mode
         })
-

@@ -80,15 +80,41 @@ def estimate_max_purchase_quantity(
     try:
         logger.info(f"📊 计算可开数量 | {symbol} | 杠杆: {leverage}x | 逐仓比例: {position_ratio*100}%")
         
+        # 获取账户信息以获取可用余额
+        account_info = client.get_account_info()
+        if isinstance(account_info, list) and len(account_info) > 0:
+            account_info = account_info[0]
+        
+        # 获取可用余额（逐仓模式下的可用保证金）
+        # Bitget API 可能返回 available、marginAvailable 或 equity 字段
+        available_margin = Decimal(str(
+            account_info.get("available") or 
+            account_info.get("marginAvailable") or 
+            account_info.get("equity") or 
+            "0"
+        ))
+        logger.info(f"💰 账户可用保证金: {available_margin} USDT")
+        
+        # 根据逐仓比例计算要使用的保证金数量
+        margin_to_use = available_margin * Decimal(str(position_ratio))
+        logger.info(f"💰 将使用的保证金: {margin_to_use} USDT | 比例: {position_ratio*100}%")
+        
+        # 获取当前价格（使用卖一价，用于开多仓）
+        current_price = get_best_ask_price(symbol)
+        logger.info(f"💰 当前价格: {current_price} | {symbol}")
+        
         # 调用 Bitget API 获取可开数量
+        # 根据官方文档，API 返回格式: {"openCount": 2.975}
         result = client.get_openable_size(
             symbol=symbol,
-            margin_mode=MARGIN_MODE_ISOLATED,
+            margin_coin="USDT",  # 保证金币种
+            open_amount=str(margin_to_use),
+            open_price=str(current_price),
             leverage=leverage
         )
         
         # 解析 API 返回的可开数量
-        # API 返回格式: {"openCount": "1000", "openCountInUsdt": "50000"}
+        # API 返回格式: {"openCount": 2.975}
         if isinstance(result, dict):
             max_open_count = Decimal(str(result.get("openCount", "0")))
         elif isinstance(result, list) and len(result) > 0:
@@ -98,9 +124,8 @@ def estimate_max_purchase_quantity(
         
         logger.info(f"📊 API 返回最大可开数量: {max_open_count} | {symbol}")
         
-        # 根据逐仓比例计算实际下单数量
-        actual_quantity = max_open_count * Decimal(str(position_ratio))
-        actual_quantity = Decimal(str(int(actual_quantity)))  # 向下取整
+        # 向下取整
+        actual_quantity = Decimal(str(int(max_open_count)))
         
         logger.info(f"✅ 计算后实际下单数量: {actual_quantity} | {symbol} | 比例: {position_ratio*100}%")
         
